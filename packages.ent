@@ -27,7 +27,7 @@
 <!ENTITY glib2-minor                  "2.82">
 <!ENTITY glib2-version                "&glib2-minor;.2">
 <!ENTITY gobject-introspection-version "1.82.0">
-<!ENTITY icu-major                    "75">
+<!ENTITY icu-major                    "76">
 <!ENTITY icu-minor                    "1">
 <!ENTITY icu-patch                    "0">
 <!ENTITY icu-version                  "&icu-major;.&icu-minor;">
