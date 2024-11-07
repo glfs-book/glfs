@@ -4,7 +4,7 @@
 # 2004-01-31
 
 # Adjust these to suit your installation
-RENDERTMP   ?= $(HOME)/tmp
+RENDERTMP   ?= /tmp
 CHUNK_QUIET  = 1
 ROOT_ID      =
 SHELL        = /bin/bash
@@ -31,7 +31,7 @@ ifneq ($(REV), sysv)
 endif
 
 ifeq ($(REV), sysv)
-  BASEDIR         ?= $(HOME)/public_html/glfs
+  BASEDIR         ?= xxx
   PDF_OUTPUT      ?= glfs.pdf
   NOCHUNKS_OUTPUT ?= glfs.html
   DUMPDIR         ?= ~/glfs-commands
@@ -39,7 +39,7 @@ ifeq ($(REV), sysv)
   GLFSHTML2       ?= glfs-html2.xml
   GLFSFULL        ?= glfs-full.xml
 else
-  BASEDIR         ?= $(HOME)/public_html/glfs-systemd
+  BASEDIR         ?= xxx/glfs-systemd
   PDF_OUTPUT      ?= glfs-sysd.pdf
   NOCHUNKS_OUTPUT ?= glfs-sysd.html
   DUMPDIR         ?= ~/glfs-sysd-commands
