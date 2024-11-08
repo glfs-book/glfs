@@ -43,6 +43,32 @@
       <para>November 7th, 2024</para>
       <itemizedlist>
         <listitem>
+          <para>[Zeckmathederg] - steamtrblshoot: Fixed outdated info.</para>
+        </listitem>
+        <listitem>
+          <para>[Zeckmathederg] - xrandr: 1.5.2 -&gt; 1.5.3.</para>
+        </listitem>
+        <listitem>
+          <para>[Zeckmathederg] - libXcursor: 1.2.2 -&gt; 1.2.3.</para>
+        </listitem>
+        <listitem>
+          <para>[Zeckmathederg] - cURL: 8.10.1 -&gt; 8.11.0.</para>
+        </listitem>
+        <listitem>
+          <para>[Zeckmathederg] - GnuTLS: 3.8.7.1 -&gt; 3.8.8.</para>
+        </listitem>
+        <listitem>
+          <para>[Zeckmathederg] - Pixman: 0.43.4 -&gt; 0.44.0.</para>
+        </listitem>
+        <listitem>
+          <para>[Toxikuu] - CMake: 3.30.5 -&gt; 3.31.0. PR
+          <ulink url="&glfs-pull;/15">(#15)</ulink></para>
+        </listitem>
+        <listitem>
+          <para>[Toxikuu] - HarfBuzz: 10.0.1 -&gt; 10.1.0. PR
+          <ulink url="&glfs-pull;/13">(#13)</ulink></para>
+        </listitem>
+        <listitem>
           <para>[Zeckmathederg] - gpuconfig: Added GSP firmware option.</para>
         </listitem>
       </itemizedlist>
