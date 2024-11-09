@@ -104,13 +104,10 @@
 make</userinput></screen>
 
     <para>
-      To test the results, issue: <command>LC_ALL=en_US.UTF-8 bin/ctest
-      -j<replaceable>&lt;N&gt;</replaceable> -O
-      cmake-&cmake-version;-test.log</command>, where
-      <replaceable>&lt;N&gt;</replaceable> is an integer between 1 and the
-      number of system cores. Setting <envar>LC_ALL</envar> is needed to
-      prevent some test failures when some of the locale variables are
-      set to non English locales.
+      To test the results, issue: <command>bin/ctest
+      -j<replaceable>$(nproc)</replaceable>. Replace
+      <replaceable>$(nproc)</replaceable> with an integer between 1 and the
+      number of system logical cores if you don't want to use all of them.
       <!--
         One test, RunCMake.FindBoost, is known to fail.
         Now cmake-3.27.0.  All tests pass.
