@@ -43,6 +43,9 @@
       <para>November 8th, 2024</para>
       <itemizedlist>
         <listitem>
+          <para>[zeckma] - CMake: Fix rendering issue.</para>
+        </listitem>
+        <listitem>
           <para>[zeckma] - Wine: 9.20 -&gt; 9.21.</para>
         </listitem>
         <listitem>
