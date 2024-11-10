@@ -16,7 +16,7 @@
 <!ENTITY libunistring-version         "1.3">
 <!ENTITY libidn2-version              "2.3.7">
 <!ENTITY libpsl-version               "0.21.5">
-<!ENTITY curl-version                 "8.10.1">
+<!ENTITY curl-version                 "8.11.0">
 <!ENTITY wget-version                 "1.24.5">
 <!ENTITY git-version                  "2.47.0">
 <!-- Security -->
@@ -71,7 +71,7 @@
 <!ENTITY which-version                "2.21">
 <!ENTITY libpng-version               "1.6.44">
 <!ENTITY freetype2-version            "2.13.3">
-<!ENTITY harfbuzz-version             "10.0.1">
+<!ENTITY harfbuzz-version             "10.1.0">
 <!ENTITY fontconfig-version           "2.15.0">
 <!-- stable lt .90 micro version -->
 <!-- BEGIN X7LIB -->
@@ -89,7 +89,7 @@
 <!ENTITY libXfixes-version            "6.0.1">
 <!ENTITY libXcomposite-version        "0.4.6">
 <!ENTITY libXrender-version           "0.9.11">
-<!ENTITY libXcursor-version           "1.2.2">
+<!ENTITY libXcursor-version           "1.2.3">
 <!ENTITY libXdamage-version           "1.1.6">
 <!ENTITY libfontenc-version           "1.1.8">
 <!ENTITY libXfont2-version            "2.0.7">
@@ -109,13 +109,13 @@
 <!ENTITY libXpresent-version          "1.0.1">
 <!-- END X7LIB -->
 <!ENTITY libxcvt-version              "0.1.2">
-<!ENTITY cmake-major-version          "3.30">
-<!ENTITY cmake-minor-version          "5">
+<!ENTITY cmake-major-version          "3.31">
+<!ENTITY cmake-minor-version          "0">
 <!ENTITY cmake-version                "&cmake-major-version;.&cmake-minor-version;">
 <!ENTITY libunwind-version            "1.8.1">
 <!ENTITY nettle-version               "3.10">
-<!ENTITY gnutls-version               "3.8.7.1">
-<!ENTITY pixman-version               "0.43.4">
+<!ENTITY gnutls-version               "3.8.8">
+<!ENTITY pixman-version               "0.44.0">
 <!-- Wayland -->
 <!ENTITY wayland-version              "1.23.1">
 <!ENTITY wayland-protocols-version    "1.38">
@@ -194,7 +194,7 @@
 <!ENTITY xmodmap-version              "1.0.11">
 <!ENTITY xpr-version                  "1.2.0">
 <!ENTITY xprop-version                "1.2.7">
-<!ENTITY xrandr-version               "1.5.2">
+<!ENTITY xrandr-version               "1.5.3">
 <!ENTITY xrdb-version                 "1.2.2">
 <!ENTITY xrefresh-version             "1.1.0">
 <!ENTITY xset-version                 "1.2.5">
@@ -261,4 +261,4 @@
 <!ENTITY libxkbcommon-version         "1.7.0">
 <!ENTITY sdl2-version                 "2.30.9">
 <!ENTITY wine-major-version           "9">
-<!ENTITY wine-version		      "&wine-major-version;.20">
+<!ENTITY wine-version		      "&wine-major-version;.21">

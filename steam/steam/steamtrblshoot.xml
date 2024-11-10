@@ -27,7 +27,8 @@
     <title>Launch Options</title>
 
     <para>
-      Any game or app, native or not, will fail to launch for an unknown reason.
+      Any game or app, native or not, will fail to launch due to the stack
+      being misaligned after a library fails to be preloaded just once.
       It will attempt to launch, and by the time a window should be created, Steam
       will fail and shut down the process. This can be resolved by going into the
       game or app's launch options and set the following:

@@ -80,7 +80,8 @@
     <para role="optional">
       <ulink url="&gnu-http;/autogen/">autogen</ulink>,
       <ulink url="https://cmocka.org/">cmocka</ulink> and
-      <ulink url="https://ftp.debian.org/debian/pool/main/d/datefudge/">datefudge</ulink> (used during the test suite if the DANE library is built), and
+      <ulink url="https://ftp.debian.org/debian/pool/main/d/datefudge/">datefudge</ulink> (used during the test suite if the DANE library is built),
+      <ulink url="https://github.com/open-quantum-safe/liboqs">liboqs</ulink>, and
       <ulink url="&sourceforge-dl;/trousers/">Trousers</ulink> (Trusted Platform Module support)
     </para>
 
@@ -116,9 +117,7 @@ make</userinput></screen>
      install time. -->
 
     <para>
-      One test hangs the test procedure. Disable it:
-      <command>sed '/ocsp-must-staple-connection/d' -i tests/Makefile</command>.
-      To test the results, now issue: <command>make check</command>.
+      To test the results, issue: <command>make check</command>.
     </para>
 
     <para>
