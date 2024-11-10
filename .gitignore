@@ -3,3 +3,4 @@ version.ent
 blfs-bootscripts*
 xxx
 *.swp
+/stylesheets/lfs-xsl/lfs.css
