@@ -75,7 +75,7 @@
 <!ENTITY fontconfig-version           "2.15.0">
 <!-- stable lt .90 micro version -->
 <!-- BEGIN X7LIB -->
-<!ENTITY xtrans-version               "1.5.1">
+<!ENTITY xtrans-version               "1.5.2">
 <!ENTITY libX11-version               "1.8.10">
 <!ENTITY libXext-version              "1.3.6">
 <!ENTITY libFS-version                "1.0.10">
@@ -174,7 +174,7 @@
 <!ENTITY sessreg-version              "1.1.3">
 <!ENTITY setxkbmap-version            "1.3.4">
 <!ENTITY smproxy-version              "1.0.7">
-<!ENTITY x11perf-version              "1.6.1">
+<!ENTITY x11perf-version              "1.7.0">
 <!ENTITY xauth-version                "1.1.3">
 <!ENTITY xcmsdb-version               "1.0.7">
 <!ENTITY xcursorgen-version           "1.0.8">
