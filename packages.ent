@@ -122,7 +122,7 @@
 <!ENTITY seatd-version                "0.9.1">
 <!-- Graphics APIs -->
 <!ENTITY libglvnd-version             "1.7.0">
-<!ENTITY vulkan-version               "1.3.301">
+<!ENTITY vulkan-version               "1.3.302">
 <!ENTITY vulkan-headers-version       "&vulkan-version;">
 <!ENTITY vulkan-loader-version        "&vulkan-version;">
 <!ENTITY spirv-version                "1.3.296.0">
