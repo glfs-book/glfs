@@ -136,7 +136,6 @@ $(BASEDIR)/index.html: $(RENDERTMP)/$(GLFSHTML) version
 		mkdir -p $(BASEDIR)/patches;          \
    fi;
 	$(Q)cp patches/*.patch $(BASEDIR)/patches
-	$(Q)./switch-theme.sh dark
 
 	@echo "Running Tidy and obfuscate.sh on chunked XHTML..."
 	$(Q)for filename in `find $(BASEDIR) -name "*.html"`; do       \
