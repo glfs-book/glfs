@@ -110,8 +110,9 @@
       <systemitem class="username">root</systemitem> user:
     </para>
 
-<screen role="root"><userinput>groupadd -fg 27 polkitd &amp;&amp;
-useradd -c "PolicyKit Daemon Owner" -d /etc/polkit-1 -u 27 \
+<screen role="root"><userinput>getent group polkitd || groupadd -fg 27 polkitd &amp;&amp;
+id polkitd || useradd -c "PolicyKit Daemon Owner" \
+        -d /etc/polkit-1 -u 27 \
         -g polkitd -s /bin/false polkitd</userinput></screen>
 
     <para>
