@@ -315,14 +315,18 @@ cp -v firmware/*.bin /usr/lib/firmware/nvidia/&nvidia-version;</userinput></scre
 # &copyholder;, &copyrightdate;.
 
 nvidia_symlink() {
-  soname=$(readelf -d $1.so.*.*.* | \
-    grep '(SONAME)' | sed -n 's/.*\[\(.*\)\]/\1/p')
-  if test -n $soname; then
-    test -e $(dirname $1)/$soname || \
-      ln -svf $1.so.*.*.* $(dirname $1)/$soname
-    test -e $1.so || \
-      ln -svf $soname $1.so
+  pushd $(dirname $1) &gt; /dev/null
+
+  origin=$(basename $1)
+  soname=$(objdump -p $origin.so.*.*.* |
+    grep 'SONAME' | awk '{print $2}')
+
+  if [ -n $soname ]; then
+    [ -e $soname ]    || ln -sv $origin.so.*.*.* $soname
+    [ -e $origin.so ] || ln -sv $soname $origin.so
   fi
+
+  popd &gt; /dev/null
 }
 </literal>
 EOF</userinput></screen>
