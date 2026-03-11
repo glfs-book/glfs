@@ -15,7 +15,6 @@
 REV         ?= systemd
 STAB        ?= development
 WORKFLOW    ?= n
-AUTO_CLEAN  ?= 1
 THEME_PATH  ?= stylesheets/lfs-xsl
 THEME       ?= dynamic
 RENDERTMP   := $(shell mktemp -d)
@@ -47,11 +46,6 @@ ifneq ($(STAB), development)
   endif
 endif
 
-CLEAN = rm -rf $(RENDERTMP)
-ifeq ($(AUTO_CLEAN), 0)
-  CLEAN =
-endif
-
 ifeq ($(REV), systemd)
   BASEDIR         ?= $(HTML_ROOT)/glfs
   DUMPDIR         ?= $(DUMP_ROOT)/glfs-commands
@@ -66,7 +60,7 @@ else
   GLFSFULL        ?= glfs-sysv-full.xml
 endif
 
-glfs: html wget-list
+glfs: html post-render
 
 help:
 	@echo ""
@@ -116,35 +110,17 @@ help:
 	@echo ""
 
 all: glfs
+post-render: downloads wget-list assets legacy-html
 world: all dump-commands test-links
 
 html: $(BASEDIR)/index.html
-$(BASEDIR)/index.html: $(RENDERTMP)/$(GLFSHTML) version wget-list
+$(BASEDIR)/index.html: $(RENDERTMP)/$(GLFSHTML) version
 	@echo "Generating chunked XHTML files..."
 	$(Q)xsltproc --nonet                                    \
 					--stringparam chunk.quietly $(CHUNK_QUIET) \
 					--stringparam base.dir $(BASEDIR)/         \
 					stylesheets/glfs-chunked.xsl               \
 					$(RENDERTMP)/$(GLFSHTML)
-	
-	@echo "Copying CSS code, images, and file downloads..."
-	$(Q)mkdir -p $(BASEDIR)/stylesheets
-	
-	$(Q)cp $(THEME_PATH)/$(THEME).lfs.css $(BASEDIR)/stylesheets/lfs.css
-	$(Q)cp stylesheets/lfs-xsl/lfs-print.css $(BASEDIR)/stylesheets
-	$(Q)sed -i 's|../stylesheet|stylesheet|' $(BASEDIR)/index.html
-	
-	$(Q)mkdir -p $(BASEDIR)/images
-	$(Q)cp -R images/* $(BASEDIR)/images
-	
-	$(Q)cd $(BASEDIR)/; sed -e "s@../images@images@g"           \
-                           -i *.html
-	
-	$(Q)mkdir -p $(BASEDIR)/download
-	$(Q)rm -rf $(BASEDIR)/download/*
-	$(Q)cp -R download/* $(BASEDIR)/download
-	$(Q)rm -rf $(BASEDIR)/patches
-	$(Q)ln -sf download $(BASEDIR)/patches
 	
 	@echo "Running Tidy and obfuscate.sh on chunked XHTML..."
 	$(Q)for filename in `find $(BASEDIR) -name "*.html"`; do       \
@@ -153,17 +129,10 @@ $(BASEDIR)/index.html: $(RENDERTMP)/$(GLFSHTML) version wget-list
       bash obfuscate.sh $$filename;                               \
       sed -i -e "1,20s@text/html@application/xhtml+xml@g" $$filename; \
    done;
-	
-	@echo "Copying over legacy HTML..."
-	$(Q)mkdir -p $(BASEDIR)/archive
-	$(Q)cp -R archive/*.html $(BASEDIR)/archive
-	
-	$(Q)$(CLEAN)
 
 validate: $(RENDERTMP)/$(GLFSFULL)
 $(RENDERTMP)/$(GLFSFULL): general.ent packages.ent $(ALLXML) $(ALLXSL) version
 	$(Q)mkdir -p $(RENDERTMP)
-	$(Q)trap '$(CLEAN)' EXIT
 	
 	@echo "Rendering the book for $(REV)..."
 	$(Q)xsltproc --nonet                               \
@@ -189,14 +158,41 @@ $(RENDERTMP)/$(GLFSHTML): $(RENDERTMP)/$(GLFSFULL) version
                 stylesheets/lfs-xsl/profile.xsl      \
                 $(RENDERTMP)/$(GLFSFULL)
 
-wget-list: $(BASEDIR)/download/wget-list
-$(BASEDIR)/download/wget-list: $(RENDERTMP)/$(GLFSFULL) version
-	@echo "Generating wget list for $(REV) at $(BASEDIR)/download/wget-list ..."
+downloads: $(BASEDIR)/download
+$(BASEDIR)/download: html
+	@echo "Copying downloadable content at $(BASEDIR)/download ..."
 	$(Q)mkdir -p $(BASEDIR)/download
+	$(Q)rm -rf $(BASEDIR)/download/*
+	$(Q)cp -R download/* $(BASEDIR)/download
+	$(Q)rm -rf $(BASEDIR)/patches
+	$(Q)ln -snf download $(BASEDIR)/patches
+
+wget-list: $(BASEDIR)/download/wget-list
+$(BASEDIR)/download/wget-list: $(RENDERTMP)/$(GLFSFULL) version html downloads
+	@echo "Generating wget list for $(REV) at $(BASEDIR)/download/wget-list ..."
 	$(Q)xsltproc --nonet                                \
                 --output $(BASEDIR)/download/wget-list \
                 stylesheets/wget-list.xsl              \
                 $(RENDERTMP)/$(GLFSFULL)
+
+legacy-html: $(BASEDIR)/archive
+$(BASEDIR)/archive: html
+	@echo "Copying legacy HTML..."
+	$(Q)mkdir -p $(BASEDIR)/archive
+	$(Q)cp -R archive/*.html $(BASEDIR)/archive
+
+assets: $(BASEDIR)/stylesheets $(BASEDIR)/images
+$(BASEDIR)/stylesheets: html
+	@echo "Copying CSS ..."
+	$(Q)mkdir -p $(BASEDIR)/stylesheets
+	$(Q)cp $(THEME_PATH)/$(THEME).lfs.css $(BASEDIR)/stylesheets/lfs.css
+	$(Q)cp stylesheets/lfs-xsl/lfs-print.css $(BASEDIR)/stylesheets
+	$(Q)sed -i 's|../stylesheet|stylesheet|' $(BASEDIR)/index.html
+$(BASEDIR)/images: html
+	@echo "Copying images ..."
+	$(Q)mkdir -p $(BASEDIR)/images
+	$(Q)cp -R images/* $(BASEDIR)/images
+	$(Q)cd $(BASEDIR)/; sed -e "s@../images@images@g" -i *.html
 
 test-links: $(BASEDIR)/test-links
 $(BASEDIR)/test-links: $(RENDERTMP)/$(GLFSFULL) version
@@ -228,13 +224,9 @@ $(BASEDIR)/test-links: $(RENDERTMP)/$(GLFSFULL) version
            echo $$URL2 >> $(BASEDIR)/good_urls 2>&1;                   \
          fi; \
    done
-	
-	$(Q)$(CLEAN)
 
 test-options:
-	$(Q)trap '$(CLEAN)' EXIT
 	$(Q)xsltproc --xinclude --nonet stylesheets/test-options.xsl index.xml
-	$(Q)$(CLEAN)
 
 dump-commands: $(DUMPDIR)
 $(DUMPDIR): $(RENDERTMP)/$(GLFSFULL) version
@@ -243,10 +235,9 @@ $(DUMPDIR): $(RENDERTMP)/$(GLFSFULL) version
                 stylesheets/dump-commands.xsl \
                 $(RENDERTMP)/$(GLFSFULL)
 	$(Q)touch $(DUMPDIR)
-	$(Q)$(CLEAN)
 
-.PHONY: glfs all world html validate profile-html wget-list test-links \
-   dump-commands version test-options
+.PHONY: glfs post-render all world html validate profile-html downloads \
+   wget-list assets test-links dump-commands version test-options
 
 version:
 	$(Q)REV=$(REV) STAB=$(STAB) WORKFLOW=$(WORKFLOW) ./git-version.sh
