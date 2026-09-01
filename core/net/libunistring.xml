@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY libunistring-download "&gnu-http;/libunistring/libunistring-&libunistring-version;.tar.xz">
+]>
+
+<sect1 id="libunistring" xreflabel="libunistring-&libunistring-version;">
+  <?dbhtml filename="libunistring.html"?>
+
+
+  <title>libunistring-&libunistring-version;</title>
+
+  <indexterm zone="libunistring">
+    <primary sortas="a-libunistring">libunistring</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to libunistring</title>
+
+    <para>
+      libunistring is a library that provides functions for manipulating
+      Unicode strings and for manipulating C strings according to the Unicode
+      standard.
+    </para>
+
+    &long-build-time;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&libunistring-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of libunistring</title>
+
+<!--    &gnulib;  -->
+
+    <para>
+      Install libunistring by running the following commands:
+    </para>
+
+<screen><userinput>./configure --prefix=/usr    \
+            --disable-static \
+            --docdir=/usr/share/doc/libunistring-&libunistring-version; &amp;&amp;
+
+make</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>make install</userinput></screen>
+
+  </sect2>
+
+  <sect2>
+    <title>lib32 Installation of lib32-libunistring</title>
+
+    <para>
+      Install lib32-libunistring by running the following commands:
+    </para>
+
+<screen><userinput>make distclean &amp;&amp;
+CC="gcc -m32" CXX="g++ -m32"         \
+PKG_CONFIG_PATH=/usr/lib32/pkgconfig \
+./configure --prefix=/usr            \
+            --libdir=/usr/lib32      \
+            --host=i686-pc-linux-gnu \
+            --disable-static &amp;&amp;
+
+make</userinput></screen>
+
+    <para>
+      Now as the &root; user:
+    </para>
+
+<screen role="root"><userinput>make DESTDIR=$PWD/DESTDIR install     &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-configure;
+
+    &static-libraries;
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directory</segtitle>
+
+      <seglistitem>
+        <seg>None</seg>
+        <seg>libunistring</seg>
+        <seg>
+          /usr/include/unistring and
+          /usr/share/doc/libunistring-&libunistring-version;
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="libunistring-lib">
+        <term><command>libunistring</command></term>
+        <listitem>
+          <para>
+            provides the unicode string library API
+          </para>
+          <indexterm zone="libunistring libunistring-lib">
+            <primary sortas="c-libunistring-lib">libunistring</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

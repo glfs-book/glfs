@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY libdrm-download "https://dri.freedesktop.org/libdrm/libdrm-&libdrm-version;.tar.xz">
+]>
+
+<sect1 id="libdrm" xreflabel="libdrm-&libdrm-version;">
+  <?dbhtml filename="libdrm.html"?>
+
+  <title>libdrm-&libdrm-version;</title>
+
+  <indexterm zone="libdrm">
+    <primary sortas="a-libdrm">libdrm</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to libdrm</title>
+
+    <para>
+      libdrm provides a userspace library for
+      accessing the direct rendering manager (DRM) on operating systems that
+      support the ioctl interface. libdrm is a low-level library, typically used
+      by graphics drivers such as the Mesa DRI drivers, the X drivers, libva and
+      similar projects.
+    </para>
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&libdrm-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">libdrm Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="libatomic_ops"/> (required by architectures without native
+      atomic operations) and <xref linkend="xorg7-lib"/> (for Intel KMS API
+      support required by Mesa)
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of libdrm</title>
+
+<!--
+    <para>
+      First fix a problem building the libdrm_intel library:
+    </para>
+
+<screen><userinput>sed -i '/not.*system/s/system/cpu_family/' meson.build</userinput></screen>
+-->
+
+    <para>
+      Install libdrm by running the following
+      commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr         \
+            --buildtype=release   \
+            -D tests=false        \
+            -D udev=true          \
+            -D valgrind=disabled  \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of libdrm</title>
+
+    <para>
+      Install lib32-libdrm by running the following
+      commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr        \
+            --buildtype=release  \
+            --cross-file=lib32   \
+            -D tests=false       \
+            -D udev=true         \
+            -D valgrind=disabled \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install                     &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32                  &amp;&amp;
+rm -rf DESTDIR                                         &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D tests=false</parameter>: This parameter disables building
+      tests for this package.
+    </para>
+
+    <para>
+      <parameter>-D udev=true</parameter>: This parameter enables support for using
+      Udev instead of <command>mknod</command>.
+    </para>
+
+    <para>
+      <parameter>-D valgrind=disabled</parameter>: This parameter disables
+      building libdrm with valgrind support. This fixes building some packages
+      that use libdrm. Change this parameter to "enabled" (or remove it) if you
+      need support for valgrind.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          None
+        </seg>
+        <seg>
+          libdrm_amdgpu, libdrm_intel, libdrm_nouveau,
+          libdrm_radeon, and libdrm<!--, and libkms-->
+        </seg>
+        <seg>
+           /usr/include/libdrm <!--,/usr/include/libkms,-->
+           and /usr/share/libdrm
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="libdrm_amdgpu">
+        <term><filename class="libraryfile">libdrm_amdgpu</filename></term>
+        <listitem>
+          <para>
+            contains the AMDGPU specific Direct Rendering Manager functions
+          </para>
+          <indexterm zone="libdrm libdrm_amdgpu">
+            <primary sortas="c-libdrm_amdgpu">libdrm_amdgpu</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libdrm_intel">
+        <term><filename class="libraryfile">libdrm_intel</filename></term>
+        <listitem>
+          <para>
+            contains the Intel specific Direct Rendering Manager
+            functions
+          </para>
+          <indexterm zone="libdrm libdrm_intel">
+            <primary sortas="c-libdrm_intel">libdrm_intel</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libdrm_nouveau">
+        <term><filename class="libraryfile">libdrm_nouveau</filename></term>
+        <listitem>
+          <para>
+            contains the open source nVidia (Nouveau) specific Direct
+            Rendering Manager functions
+          </para>
+          <indexterm zone="libdrm libdrm_nouveau">
+            <primary sortas="c-libdrm_nouveau">libdrm_nouveau</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libdrm_radeon">
+        <term><filename class="libraryfile">libdrm_radeon</filename></term>
+        <listitem>
+          <para>
+            contains the AMD Radeon specific Direct Rendering Manager
+            functions
+          </para>
+          <indexterm zone="libdrm libdrm_radeon">
+            <primary sortas="c-libdrm_radeon">libdrm_radeon</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libdrm-lib">
+        <term><filename class="libraryfile">libdrm</filename></term>
+        <listitem>
+          <para>
+            contains the Direct Rendering Manager API functions
+          </para>
+          <indexterm zone="libdrm libdrm-lib">
+            <primary sortas="c-libdrm">libdrm</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <!-- Removed in 2.4.111
+      <varlistentry id="libkms">
+        <term><filename class="libraryfile">libkms</filename></term>
+        <listitem>
+          <para>
+            contains API functions for kernel mode setting abstraction
+          </para>
+          <indexterm zone="libdrm libkms">
+            <primary sortas="c-libkms">libkms</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+      -->
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

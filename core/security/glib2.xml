@@ -1,0 +1,752 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY glib2-download "&gnome-download-http;/glib/&glib2-major;.&glib2-minor;/glib-&glib2-version;.tar.xz">
+]>
+
+<sect1 id="glib2" xreflabel="GLib-&glib2-version;">
+  <?dbhtml filename="glib2.html"?>
+
+
+  <title>GLib-&glib2-version;</title>
+
+  <indexterm zone="glib2">
+    <primary sortas="a-GLib2">GLib2</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to GLib</title>
+
+    <para>
+      The GLib package contains low-level
+      libraries useful for providing data structure handling for C, portability
+      wrappers and interfaces for runtime functionality such as an
+      event loop, threads, dynamic loading and an object system.
+    </para>
+
+    &long-build-time;
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&glib2-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+
+    <para>
+      <emphasis role="strong">GObject Introspection (Recommended)</emphasis>
+    </para>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download:
+          <ulink url="&gnome-download-http;/gobject-introspection/&gi-minor;/gobject-introspection-&gobject-introspection-version;.tar.xz"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+<!--
+    <para>
+      <emphasis role="strong">Required patch to fix memory corruption issues
+      exposed by glibc-2.43:</emphasis>
+    </para>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/glib/glib-&glib2-version;-upstream_fixes-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <para>
+      <emphasis role="strong">Patch for Log Level Selection (Optional)</emphasis>
+    </para>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Optional patch:
+          <ulink url="&dl-root;/glib/glib-skip_warnings-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">GLib Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref role="runtime" linkend="shared-mime-info"/> and
+      <xref role="runtime" linkend="desktop-file-utils"/>
+      (both at runtime)
+    </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/general/libxslt.html">libxslt</ulink> (for man-pages)
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of GLib</title>
+
+<!--
+    <para>
+      First, fix memory corruption issues exposed by glibc-2.43:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../glib-&glib2-version;-upstream_fixes-1.patch</userinput></screen>
+-->
+
+    <para>
+      If desired, apply the optional patch. In many cases, applications that
+      use this library, either  directly or indirectly via other libraries.
+      This patch enables the use of an environment variable,
+      <envar>GLIB_LOG_LEVEL</envar>, that suppresses unwanted messages. The
+      value of the variable is a digit that corresponds to:
+    </para>
+
+    <simplelist>
+      <member>1  Alert</member>
+      <member>2  Critical</member>
+      <member>3  Error</member>
+      <member>4  Warning</member>
+      <member>5  Notice</member>
+    </simplelist>
+
+    <para>
+      For instance <userinput>export GLIB_LOG_LEVEL=4</userinput> will skip
+      output of Warning and Notice messages (and Info/Debug messages if they
+      are turned on).  If <envar>GLIB_LOG_LEVEL</envar> is not defined, normal
+      message output will not be affected.
+    </para>
+
+<screen><userinput>patch -Np1 -i ../glib-skip_warnings-1.patch</userinput></screen>
+
+    <warning>
+      <para>
+        If a previous version of glib is installed, move the headers out of the
+        way so that later packages do not encounter conflicts:
+      </para>
+
+<screen role="root"><userinput remap="pre">if [ -e /usr/include/glib-2.0 ]; then
+    rm -rf /usr/include/glib-2.0.old &amp;&amp;
+    mv -vf /usr/include/glib-2.0{,.old}
+fi</userinput></screen>
+
+    </warning>
+
+    <para>
+      Install GLib by running the following
+      commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr             \
+            --buildtype=release       \
+            -D introspection=disabled \
+            -D glib_debug=disabled    \
+            -D man-pages=disabled     \
+            -D tests=false            \
+            -D sysprof=disabled       \
+            .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      As the <systemitem class="username">root</systemitem> user,
+      install this package for the first time to allow building GObject
+      Introspection:
+    </para>
+
+    <screen role="root"><userinput>ninja install</userinput></screen>
+
+    <para>
+      Build GObject Introspection:
+    </para>
+
+<screen><userinput>tar xf ../../gobject-introspection-&gobject-introspection-version;.tar.xz &amp;&amp;
+
+meson setup gobject-introspection-&gobject-introspection-version; gi-build \
+            --prefix=/usr --buildtype=release     &amp;&amp;
+ninja -C gi-build</userinput></screen>
+
+    <para>
+      As the &root; user, install GObject Introspection for generating the
+      introspection data of GLib libraries (required by various packages using
+      Glib, especially some GNOME packages):
+    </para>
+
+<screen role="root"><userinput>ninja -C gi-build install</userinput></screen>
+
+    <para>
+      Now generate the introspection data:
+    </para>
+
+<screen><userinput>meson configure -D introspection=enabled &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      As the &root; user, install this package again for the introspection
+      data:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2>
+    <title>lib32 Installation of GLib</title>
+
+    <para>
+      Install lib32-GLib by running the following commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr             \
+            --buildtype=release       \
+            --cross-file=lib32        \
+            -D introspection=disabled \
+            -D glib_debug=disabled    \
+            -D man-pages=disabled     \
+            -D tests=false            \
+            -D sysprof=disabled       \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install    &amp;&amp;
+cp -vR DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D man-pages=disabled</parameter>: This switch causes the
+      build to create and install the package man pages.
+    </para>
+
+    <para>
+      <parameter>-D tests=false</parameter>: This switch causes tests
+      to be built. It is disabled because it is beyond the scope of GLFS.
+      If you'd like to test glib, reference
+      <ulink url="&blfs-svn;/general/glib2.html">
+      BLFS's glib page</ulink>.
+    </para>
+
+    <para>
+      <parameter>-D glib_debug=disabled</parameter>: This switch causes the
+      build to not include some expensive checks for debugging in the built
+      programs and libraries.
+    </para>
+
+    <para>
+      <parameter>-D sysprof=disabled</parameter>: This switch disables the
+      tracing support for sysprof.  Remove this option if you want the
+      tracing support.  Note that if sysprof is not installed, removing
+      this option will cause the build system to download a copy of sysprof
+      from the Internet.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <bridgehead renderas="sect3">GLib Contents</bridgehead>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          gapplication,           gdbus, gdbus-codegen,
+          gi-compile-repository,  gi-decompile-typelib, gi-inspect-typelib
+          gio,                    gio-querymodules,
+          glib-compile-resources, glib-compile-schemas,
+          glib-genmarshal,        glib-gettextize,
+          glib-mkenums,           gobject-query,
+          gresource,              gsettings,
+          gtester, and            gtester-report
+        </seg>
+        <seg>
+          libgio-2.0,
+          libgirepository-2.0,
+          libglib-2.0,
+          libgmodule-2.0,
+          libgobject-2.0, and
+          libgthread-2.0
+        </seg>
+        <seg>
+          /usr/include/gio-unix-2.0,
+          /usr/include/glib-2.0,
+          /usr/lib/gio,
+          /usr/lib/glib-2.0,
+          /usr/share/glib-2.0, and
+          /usr/share/doc/glib-&glib2-version; (optional)
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <bridgehead renderas="sect3">GObject Introspection Contents</bridgehead>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <!-- g-ir-doc-tool is installed if Mako and Markdown are present -->
+      <seglistitem>
+        <seg>
+          g-ir-annotation-tool, g-ir-compiler, g-ir-doc-tool (optional),
+          g-ir-generate, g-ir-inspect, and g-ir-scanner
+        </seg>
+        <seg>
+          libgirepository-1.0 and
+          _giscanner.&python3-lib-suffix;
+        </seg>
+        <seg>
+          /usr/include/gobject-introspection-1.0,
+          /usr/lib/girepository-1.0,
+          /usr/lib/gobject-introspection,
+          /usr/share/gir-1.0, and
+          /usr/share/gobject-introspection-1.0
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="gapplication">
+        <term><command>gapplication</command></term>
+        <listitem>
+          <para>
+            can be used to start applications and to send
+            messages to already-running instances of other applications
+          </para>
+          <indexterm zone="glib2 gapplication">
+            <primary sortas="b-gapplication">application</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gdbus">
+        <term><command>gdbus</command></term>
+        <listitem>
+          <para>
+            is a simple tool used for working with
+            D-Bus objects
+          </para>
+          <indexterm zone="glib2 gdbus">
+            <primary sortas="b-gdbus">gdbus</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gdbus-codegen">
+        <term><command>gdbus-codegen</command></term>
+        <listitem>
+          <para>
+            is used to generate code and/or documentation for one or
+            more D-Bus interfaces
+          </para>
+          <indexterm zone="glib2 gdbus-codegen">
+            <primary sortas="b-gdbus-codegen">gdbus-codegen</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gi-compile-repository">
+        <term><command>gi-compile-repository</command></term>
+        <listitem>
+          <para>
+            converts one or more GIR files into one or more typelib files
+          </para>
+          <indexterm zone="glib2 gi-compile-repository">
+            <primary sortas="b-gi-compile-repository">gi-compile-repository</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gi-decompile-typelib">
+        <term><command>gi-decompile-typelib</command></term>
+        <listitem>
+          <para>
+            is a GIR decompiler that uses the repository API
+          </para>
+          <indexterm zone="glib2 gi-decompile-typelib">
+            <primary sortas="b-gi-decompile-typelib">gi-decompile-typelib</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gi-inspect-typelib">
+        <term><command>gi-inspect-typelib</command></term>
+        <listitem>
+          <para>
+            is a utility that gives information about a GI typelib
+          </para>
+          <indexterm zone="glib2 gi-inspect-typelib">
+            <primary sortas="b-gi-inspect-typelib">gi-inspect-typelib</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gio">
+        <term><command>gio</command></term>
+        <listitem>
+          <para>
+            is a utility that makes many GIO
+            features available from the command line
+          </para>
+          <indexterm zone="glib2 gio">
+            <primary sortas="b-gio">gio</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gio-querymodules">
+        <term><command>gio-querymodules</command></term>
+        <listitem>
+          <para>
+            is used to create a <filename>giomodule.cache</filename> file in
+            the listed directories. This file lists the implemented extension
+            points for each module that has been found
+          </para>
+          <indexterm zone="glib2 gio-querymodules">
+            <primary sortas="b-gio-querymodules">gio-querymodules</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glib-compile-resources">
+        <term><command>glib-compile-resources</command></term>
+        <listitem>
+          <para>
+            is used to read the resource description from a file and
+            the files that it references to create a binary resource
+            bundle that is suitable for use with the GResource API
+          </para>
+          <indexterm zone="glib2 glib-compile-resources">
+            <primary sortas="b-glib-compile-resources">glib-compile-resources</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glib-compile-schemas">
+        <term><command>glib-compile-schemas</command></term>
+        <listitem>
+          <para>
+            is used to compile all the GSettings XML schema files
+            in a directory into a binary file with the name
+            <filename>gschemas.compiled</filename> that can be used by GSettings
+          </para>
+          <indexterm zone="glib2 glib-compile-schemas">
+            <primary sortas="b-glib-compile-resources">glib-compile-schemas</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glib-genmarshal">
+        <term><command>glib-genmarshal</command></term>
+        <listitem>
+          <para>
+            is a C code marshaller generation utility for GLib closures
+          </para>
+          <indexterm zone="glib2 glib-genmarshal">
+            <primary sortas="b-glib-genmarshal">glib-genmarshal</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glib-gettextize">
+        <term><command>glib-gettextize</command></term>
+        <listitem>
+          <para>
+            is a variant of the gettext
+            internationalization utility
+          </para>
+          <indexterm zone="glib2 glib-gettextize">
+            <primary sortas="b-glib-gettextize">glib-gettextize</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glib-mkenums">
+        <term><command>glib-mkenums</command></term>
+        <listitem>
+          <para>
+            is a C language enum description generation utility
+          </para>
+          <indexterm zone="glib2 glib-mkenums">
+            <primary sortas="b-glib-mkenums">glib-mkenums</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gobject-query">
+        <term><command>gobject-query</command></term>
+        <listitem>
+          <para>
+            is a small utility that draws a tree of types
+          </para>
+          <indexterm zone="glib2 gobject-query">
+            <primary sortas="b-gobject-query">gobject-query</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gresource">
+        <term><command>gresource</command></term>
+        <listitem>
+          <para>
+            offers a simple command line interface to GResource
+          </para>
+          <indexterm zone="glib2 gresource">
+            <primary sortas="b-gresource">gresource</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gsettings">
+        <term><command>gsettings</command></term>
+        <listitem>
+          <para>
+            offers a simple command line interface to GSettings
+          </para>
+          <indexterm zone="glib2 gsettings">
+            <primary sortas="b-gsettings">gsettings</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gtester">
+        <term><command>gtester</command></term>
+        <listitem>
+          <para>
+            is a test running utility
+          </para>
+          <indexterm zone="glib2 gtester">
+            <primary sortas="b-gtester">gtester</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gtester-report">
+        <term><command>gtester-report</command></term>
+        <listitem>
+          <para>
+            is a test report formatting utility
+          </para>
+          <indexterm zone="glib2 gtester-report">
+            <primary sortas="b-gtester-report">gtester-report</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgio">
+        <term><filename class='libraryfile'>libgio-2.0</filename></term>
+        <listitem>
+          <para>
+            is a library providing useful classes for general purpose I/O,
+            networking, IPC, settings, and other high level application
+            functionality
+          </para>
+          <indexterm zone="glib2 libgio">
+            <primary sortas="c-libgio">libgio-2.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgirepository">
+        <term><filename class='libraryfile'>libgirepository-2.0</filename></term>
+        <listitem>
+          <para>
+            is a library providing access to typelibs and introspection data
+            which describes C APIs
+          </para>
+          <indexterm zone="glib2 libgirepository">
+            <primary sortas="c-libgirepository2">libgirepository-2.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libglib">
+        <term><filename class='libraryfile'>libglib-2.0</filename></term>
+        <listitem>
+          <para>
+            is a general-purpose, portable utility library, which provides
+            many useful data types, macros, type conversions, string
+            utilities, file utilities, a mainloop abstraction, and so on
+          </para>
+          <indexterm zone="glib2 libglib">
+            <primary sortas="c-libglib">libglib-2.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgmodule">
+        <term><filename class='libraryfile'>libgmodule-2.0</filename></term>
+        <listitem>
+          <para>
+            provides portable API for dynamically loading modules
+          </para>
+          <indexterm zone="glib2 libgmodule">
+            <primary sortas="c-libgmodule">libgmodule-2.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgobject">
+        <term><filename class='libraryfile'>libgobject-2.0</filename></term>
+        <listitem>
+          <para>
+            provides the GLib base type system and object class
+          </para>
+          <indexterm zone="glib2 libgobject">
+            <primary sortas="c-libgobject">libgobject-2.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgthread">
+        <term><filename class='libraryfile'>libgthread-2.0</filename></term>
+        <listitem>
+          <para>
+            is a skeleton library for backwards compatibility; it used to
+            be the GLib thread library but the functionalities has been
+            merged info <systemitem class='library'>libglib-2.0</systemitem>
+          </para>
+          <indexterm zone="glib2 libgthread">
+            <primary sortas="c-libgthread">libgthread-2.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="g-ir-annotation-tool">
+        <term><command>g-ir-annotation-tool</command></term>
+        <listitem>
+          <para>
+            creates or extracts annotation data from GI typelibs
+          </para>
+          <indexterm zone="glib2 g-ir-annotation-tool">
+            <primary sortas="b-g-ir-annotation-tool">g-ir-annotation-tool</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="g-ir-compiler">
+        <term><command>g-ir-compiler</command></term>
+        <listitem>
+          <para>
+            is a counterpart of <command>gi-compile-repository</command>
+            for the old
+            <systemitem class='library'>libgirepository-1.0</systemitem>
+            API
+          </para>
+          <indexterm zone="glib2 g-ir-compiler">
+            <primary sortas="b-g-ir-compiler">g-ir-compiler</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry id="g-ir-doc-tool">
+        <term><command>g-ir-doc-tool</command></term>
+        <listitem>
+          <para>
+            generates Mallard files that can be viewed with
+            <command>yelp</command> or rendered to HTML with
+            <command>yelp-build</command> from
+            <ulink url="&gnome-download-http;/yelp-tools">yelp-tools</ulink>
+          </para>
+          <indexterm zone="glib2 g-ir-doc-tool">
+            <primary sortas="b-g-ir-doc-tool">g-ir-doc-tool</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="g-ir-inspect">
+        <term><command>g-ir-inspect</command></term>
+        <listitem>
+          <para>
+            is a counterpart of <command>gi-inspect-typelib</command>
+            for the old
+            <systemitem class='library'>libgirepository-1.0</systemitem>
+            API
+          </para>
+          <indexterm zone="glib2 g-ir-inspect">
+            <primary sortas="b-g-ir-inspect">g-ir-inspect</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="g-ir-generate">
+        <term><command>g-ir-generate</command></term>
+        <listitem>
+          <para>
+            is a counterpart of <command>gi-decompile-typelib</command>
+            for the old
+            <systemitem class='library'>libgirepository-1.0</systemitem>
+            API
+          </para>
+          <indexterm zone="glib2 g-ir-generate">
+            <primary sortas="b-g-ir-generate">g-ir-generate</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="g-ir-scanner">
+        <term><command>g-ir-scanner</command></term>
+        <listitem>
+          <para>
+            is a tool which generates GIR XML files by parsing headers and
+            introspecting GObject based libraries
+          </para>
+          <indexterm zone="glib2 g-ir-scanner">
+            <primary sortas="b-g-ir-scanner">g-ir-scanner</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgirepository-1.0">
+        <term><filename class='libraryfile'>libgirepository-1.0</filename></term>
+        <listitem>
+          <para>
+            is a counterpart of
+            <systemitem class='library'>libgirepository-2.0</systemitem>
+            with the old 1.0 API
+          </para>
+          <indexterm zone="glib2 libgirepository-1.0">
+            <primary sortas="c-libgirepository1">libgirepository-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+  </sect2>
+
+</sect1>

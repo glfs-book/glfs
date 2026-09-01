@@ -1,0 +1,45 @@
+Submitted by:            Zeckma
+Date:                    2026-06-06
+Initial Package Version: 0.63
+Origin:                  Upstream
+Upstream Status:         Merged
+Description:             Makes the group who manages /run/lock configurable.
+
+diff --git a/meson_options.txt b/meson_options.txt
+index d529daf8c..62daa863c 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -24,6 +24,8 @@ option('sysvinit', type : 'boolean', value : false,
+   description : 'enable SysVinit compatibility (linux only)')
+ option('zsh-completions', type : 'boolean',
+   description : 'install zsh completions')
++option('uucp_group', type : 'string', value : 'uucp',
++  description : 'group to use for /run/lock')
+ option('agetty', type: 'array',
+   value: ['tty1', 'tty2', 'tty3', 'tty4', 'tty5', 'tty6'],
+   description : 'agetty symlinks to install when sysvinit is also specified')
+diff --git a/sh/init.sh.Linux.in b/sh/init.sh.Linux.in
+index 31ab27639..33823a2d9 100644
+--- a/sh/init.sh.Linux.in
++++ b/sh/init.sh.Linux.in
+@@ -83,7 +83,7 @@ elif ! mountinfo -q /run; then
+ fi
+ 
+ checkpath -d "$RC_SVCDIR"
+-checkpath -d -m 0775 -o root:uucp /run/lock
++checkpath -d -m 0775 -o root:@UUCP_GROUP@ /run/lock
+ 
+ # Try to mount xenfs as early as possible, otherwise rc_sys() will always
+ # return RC_SYS_XENU and will think that we are in a domU while it's not.
+diff --git a/sh/meson.build b/sh/meson.build
+index a567380c7..7d4473f0d 100644
+--- a/sh/meson.build
++++ b/sh/meson.build
+@@ -6,6 +6,7 @@ sh_conf_data.set('PKG_PREFIX', pkg_prefix)
+ sh_conf_data.set('SBINDIR', sbindir)
+ sh_conf_data.set('SHELL', get_option('shell'))
+ sh_conf_data.set('SYSCONFDIR', get_option('sysconfdir'))
++sh_conf_data.set('UUCP_GROUP', get_option('uucp_group'))
+ 
+ sh = [
+   'rc-functions.sh',

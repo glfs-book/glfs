@@ -16,7 +16,7 @@
     LFS, there is a version that provides multilib support, from normal binary
     execution to compiling 32-bit software from the supplied toolchain. The
     guide is called Multilib LFS, or MLFS. It can be read <ulink
-    url="&mlfs-m32-root;/">here</ulink>. If you haven't built LFS with MLFS or
+    url="&mlfs-root;/">here</ulink>. If you haven't built LFS with MLFS or
     built in multilib support already, then you will need to start over.
   </para>
 

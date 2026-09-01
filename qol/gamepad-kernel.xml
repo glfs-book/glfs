@@ -7,11 +7,11 @@
   <emphasis role='blue'>I</emphasis>nput device support ---&gt;
     &lt;*&gt; <emphasis role='blue'>G</emphasis>eneric input layer (needed for keyboard, mouse, ...)            [INPUT]
     [*]   <emphasis role='blue'>J</emphasis>oysticks/Gamepads ---&gt;                               [INPUT_JOYSTICK]
-      
+
       # For older gamepads:
       &lt;*&gt;     M<emphasis role='blue'>u</emphasis>ltisystem, NES, SNES, N64, PSX joysticks and gamepads
                                                          ...  [JOYSTICK_GAMECON]
-      
+
       # For Xbox gamepad support:
       &lt;*&gt;     <emphasis role='blue'>X</emphasis>box gamepad support                               [JOYSTICK_XPAD]
       [ /*]     <emphasis role='blue'>X</emphasis>box gamepad rumble support                   [JOYSTICK_XPAD_FF]
@@ -20,19 +20,19 @@
   [*] H<emphasis role='blue'>I</emphasis>D bus support ---&gt;                                         [HID_SUPPORT]
     &lt;*/M&gt; H<emphasis role='blue'>I</emphasis>D bus core support                                             [HID]
       <emphasis role='blue'>S</emphasis>pecial HID drivers ---&gt;
-      
+
       # For Nintendo Switch gamepad support:
       &lt;*&gt;       N<emphasis role='blue'>i</emphasis>ntendo Joy-Con, NSO, and Pro Controller support [HID_NINTENDO]
       [ /*]       N<emphasis role='blue'>i</emphasis>ntendo Switch controller force feedback support
                                                               ...  [NINTENDO_FF]
-      
+
       # For Playstation gamepad support:
-      &lt;*/M&gt;     <emphasis role='blue'>S</emphasis>ony PS2/3/4 accessories                              [HID_SONY]
+      &lt;*/M&gt;     <emphasis role='blue'>S</emphasis>ony PS2/3/4/5 accessories                            [HID_SONY]
       [ /*]       <emphasis role='blue'>S</emphasis>ony PS2/3/4 accessories force feedback support      [SONY_FF]
-      
+
       # For Steam controllers:
       &lt;*&gt;       <emphasis role='blue'>S</emphasis>team Controller/Deck support                        [HID_STEAM]
-      
+
       # For Nintendo Wii and Wii U controller support:
       &lt; /*/M&gt;   N<emphasis role='blue'>i</emphasis>ntendo Wii / Wii U peripherals                   [HID_WIIMOTE]
   [*] <emphasis role='blue'>U</emphasis>SB support ---&gt;                                             [USB_SUPPORT]</screen>

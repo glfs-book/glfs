@@ -21,8 +21,7 @@
     <title>Introduction to Static MinGW-w64-GCC</title>
 
     <para>
-      MinGW-w64-GCC provides
-      GCC compilers for MinGW-w64,
+      MinGW-w64-GCC provides GCC compilers for MinGW-w64,
       allowing users and applications to compile code targeting
       Windows. This will be done in steps to avoid the need for
       already present binaries. This is the static build, which
@@ -40,6 +39,7 @@
       </listitem>
     </itemizedlist>
 
+<!--
     <bridgehead renderas="sect3">Additional Downloads</bridgehead>
     <itemizedlist spacing="compact">
       <listitem>
@@ -49,6 +49,7 @@
         </para>
       </listitem>
     </itemizedlist>
+-->
 
     <bridgehead renderas="sect3">Static MinGW-w64-GCC Dependencies</bridgehead>
 
@@ -62,12 +63,14 @@
   <sect2 role="installation">
     <title>Installation of Static MinGW-w64-GCC</title>
 
+<!--
     <para>
-      Fix a MinGW-w64 issue within libstdc++:
+      Prevent build failures when C code is compiled to Intel syntax assembly:
     </para>
 
 <screen><userinput
   remap="pre">patch -Np1 -i ../gcc-&gcc-version;-mingw_fixes-1.patch</userinput></screen>
+-->
 
     <sect3>
       <title>x86_64 Installation of Static MinGW-w64-GCC</title>

@@ -24,7 +24,7 @@
 <!ENTITY meson-cross
   "<important><para>For the lib32 installation instructions, they require new
   Meson cross files from <ulink
-  url='&mlfs-m32-root;/chapter08/meson.html'>MLFS</ulink>, as
+  url='&mlfs-root;/chapter08/meson.html'>MLFS</ulink>, as
   <parameter>--libdir=/usr/lib32</parameter> has been moved to the cross files
   and no longer appear in the instructions. Install the new cross files so that
   32-bit libraries don't get installed in <filename
@@ -48,8 +48,8 @@
   <command>meson configure</command> command will reset this
   option.">
 
-<!ENTITY build-use-internet
-  "<note><para>An Internet connection is needed for building this
+<!ENTITY build-use-network
+  "<note><para>A network connection is needed for building this
   package. The system certificate store may need to be set up with
   <xref role='required' linkend='make-ca'/> before building this
   package.</para></note>">
@@ -126,10 +126,18 @@
 <!ENTITY static-libraries
   "<para><parameter>--disable-static</parameter>: This switch prevents
   installation of static versions of the libraries.</para>">
+
+<!-- Fixes needed by various packages -->
 <!ENTITY gnulib
   "<para>First, make a fix required by glibc-2.43 or later:</para>
 <screen><userinput remap='pre'>sed -r '/_GL_EXTERN_C/s/w?memchr|bsearch/(&amp;)/' \
     -i $(find -name \*.in.h)</userinput></screen>">
+<!ENTITY x-nettle
+  "<para>Allow building against Nettle-4.0 and higher:</para>
+<screen remap='pre'><userinput>sed -e '/sha.h/s/sha/sha1/'                  \
+    -e '/sha1/a #include &lt;nettle/version.h&gt;' \
+    -e 's/ctx, 20/ctx/'                      \
+    -i os/xsha1.c</userinput></screen>">
 
 <!-- Save repetition for multiple passes of a package. -->
 <!ENTITY dbus-m64 "
@@ -140,12 +148,12 @@
   parameters to the <command>meson</command> command shown below):
 </para>
 
-<screen><userinput>mkdir  build &amp;&amp;
-cd     build &amp;&amp;
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
 
 meson setup --prefix=/usr          \
             --buildtype=release    \
-            --wrap-mode=nofallback \</userinput><userinput revision='sysv'>
+            --wrap-mode=nofallback \</userinput><userinput revision='openrc,sysv'>
             -D systemd=disabled    \</userinput><userinput>
             .. &amp;&amp;
 
@@ -166,22 +174,17 @@ ninja</userinput></screen>
 <screen role='root'><userinput>chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper &amp;&amp;
 chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper</userinput></screen>">
 
-<!ENTITY nvidia-common-deps "<para role='required'>
-  &gbm;,
+<!ENTITY rc-user-add
+"mkdir -pv ~/.config/rc/{init,conf}.d &amp;&amp;
+mkdir -pv ~/.config/rc/env &amp;&amp;
+mkdir -pv ~/.config/rc/runlevels/{sysinit,boot,default,shutdown} &amp;&amp;
+rc-update --user add">
+
+<!ENTITY nvidia-common-req "&gbm;,
   <xref linkend='libglvnd'/>, and
-  <xref linkend='xorg7-lib'/>
-</para>
-<para role='recommended'>
-  <itemizedlist spacing='compact'>
-    <listitem>
-      <para>
-        <ulink url='&slfs-website;/general/cuda.html'>CUDA</ulink>
-        (for building in direct CUDA support into various packages like
-        FFmpeg or OBS-Studio; install after following this page)
-      </para>
-    </listitem>
-<!-- NOT READY
-    <listitem revision='sysv'>
+  <xref linkend='xorg7-lib'/>">
+<!ENTITY nvidia-common-rec "<!-- NOT READY
+    <listitem revision='openrc,sysv'>
       <para>
         <xref linkend='dbus'/> and <xref linkend='elogind'/> (for
         NVIDIA-Powerd support)
@@ -203,12 +206,7 @@ chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper</userinput></scr
     </listitem>
     <listitem>
       <para>
-        <xref linkend='nvidia-egl'/> (for EGL driver support)
-      </para>
-    </listitem>
-    <listitem>
-      <para>
-        <xref linkend='ocl-icd'/> (for using the OpenCL drivers)
+        <xref linkend='opencl-sdk'/> (for using the OpenCL drivers)
       </para>
     </listitem>
     <listitem>
@@ -227,9 +225,7 @@ chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper</userinput></scr
         <command>nvidia-xconfig</command>, like in <xref
         linkend='whatnow'/>; install after following this page)
       </para>
-    </listitem>
-  </itemizedlist>
-</para>">
+    </listitem>">
 
 <!ENTITY nvidia-common-kernel "<para>
 First enable XFree86 DRI and Nouveau
@@ -248,68 +244,88 @@ support in the kernel and recompile if necessary.
   blacklisted.
 </para></important>">
 
-<!ENTITY nvidia-common-build-modules "<note><para>
-If the currently running kernel is a different version than you are
-targeting, likely as a result of being in a chroot or haven't rebooted
-after a kernel upgrade yet, building the kernel modules will cause a
-build failure or will install modules for a kernel that is not the
-target. The default variable that the kernel build system uses to check
-for the kernel version will use <command>uname -r</command>, in turn
-reporting the kernel version of the currently running host kernel and
-not the target. This can be worked around by specifying
-<envar>KERNEL_UNAME=<replaceable>&lt;x.x.x&gt;</replaceable></envar>
-which will override the kernel version to build against and install to.
-The target kernel version must have already been built for this to work.
-If the kernel version doesn't have a third digit, like 6.16 instead of
-6.16.1, append a <envar>.0</envar> at the end, like
-<envar>6.16.0</envar>. It should match the version found in <filename
-class='directory'>/usr/lib/modules</filename>.
+<!ENTITY nvidia-runfile-common "-z \
+  -j $(nproc)   \
+  -k <replaceable>`uname -r`</replaceable> \
+  --no-peermem  \
+  --override-file-type-destination=OPENCL_WRAPPER_LIB:/tmp/nvidia \
+  --override-file-type-destination=OPENCL_WRAPPER_SYMLINK:/tmp/nvidia">
+
+<!ENTITY nvidia-runfile-explanation "<bridgehead renderas='sect3'
+role='commands'>Command Explanations</bridgehead>
+<para>
+  <parameter>-z</parameter>: This parameter disables checking to see if
+  the <literal>nouveau</literal> kernel driver is loaded, which may be if
+  <literal>nouveau</literal> isn't blacklisted by <command>modprobe</command>
+  yet. Otherwise, the driver will complain.
 </para>
 <para>
-  If the above case apply to you, whether you're in a chroot or haven't
-  yet rebooted after a kernel upgrade, specify the kernel target by
-  exporting the variable now ahead of time to prevent needing to specify it
-  for every command:
+  <parameter>-j $(nproc)</parameter>: This works like how
+  <envar>MAKEFLAGS</envar> is set up. The concurrency is capped out unless
+  this parameter is used.
 </para>
-<screen><userinput>export KERNEL_UNAME=<replaceable>&lt;x.x.x&gt;</replaceable></userinput></screen>
-</note>
+<para>
+  <parameter>-k <replaceable>`uname -r`</replaceable></parameter>: This
+  parameter sets the kernel version/name the NVIDIA driver should build
+  against. <literal><replaceable>`uname -r`</replaceable></literal> is used,
+  which mimicks the behavior of the driver and most third-party kernel module
+  build systems. This is necessary if the kernel version/name you want NVIDIA
+  to build against differs from what <command>uname -r</command> reports.
+  For example, if you want to build against <literal>7.0.11</literal> but
+  <command>uname -r</command> reports <literal>6.19.12</literal>, you must
+  use <parameter>-k 7.0.11</parameter>. <command>uname -r</command> reports
+  what the host kernel is being used, which can pose issues in a chroot.
+  <parameter>`command`</parameter> is used to return the output of a command,
+  so if <literal>7.0.11</literal> is given, you should remove the backticks
+  since that string is not a command. If you want to build against something
+  like <literal>7.1</literal>, where it is a new minor or major version but
+  isn't a bugfix release, <literal>.0</literal> must be suffixed so it would
+  look like <literal>7.1.0</literal>. To see what kernel names/versions are
+  available to build against, look in the <filename
+  class='directory'>/usr/lib/modules</filename> directory.
+</para>
+<para>
+  <parameter>--no-peermem</parameter>: This parameter disables building the
+  <literal>peermem</literal> (or NVIDIA Peer Memory) kernel module. It's used
+  for datacenters. Using <option>-A</option> on its own will show you which
+  exact devices the Peer Memory kernel module covers. If you need it, remove
+  this parameter.
+</para>
+<para>
+  <parameter>--override...=OPENCL_WRAPPER...:/tmp/nvidia</parameter>:
+  These parameters disable installing the NVIDIA OpenCL ICD loader in favor
+  of <xref linkend='opencl-sdk'/>, which is more generic and supports the
+  NVIDIA OpenCL drivers. If 32-bit compatibility libraries are being installed,
+  the driver will warn multiple times that the <filename
+  class='libraryfile'>libOpenCL</filename> library exists. Keep agreeing to
+  continue the installation.
+</para>
+<para>
+  <option>--print-recommended-kernel-module-type</option>: When used, the
+  driver will tell you which kernel module type is recommended, then exit.
+  It is recommended to use this if you're unfamiliar with installing the
+  NVIDIA driver via the runfile. Afterwards, install the driver normally then
+  choose the recommended kernel module type when prompted.
+</para>
+<para>
+  <option>-A</option>: This option is used to give all the options that you can
+  use to tune how the installation of the driver will be handled.
+</para>
 
 <para>
-  There will be 5 or 6 kernel modules that will be built. Depending on your
-  use case, you can skip building a module or two. The UVM (Unified Virtual
-  Memory) module is for use with <ulink
-  url='&slfs-website;/general/cuda.html'>CUDA</ulink>. If you won't use
-  it, nor wish to use its capabilities, you can skip building the UVM
-  kernel module. There is also the PeerMem module which is for datacenters.
-  For gaming, it can safely be disabled.
+  The driver may ask you multiple questions, output various warnings, and
+  generally say a lot. Just go through the prompts.
 </para>
-<para>
-  For UVM, the module is named <computeroutput>nvidia-uvm</computeroutput>.
-  For PeerMem, it will be named
-  <computeroutput>nvidia-peermem</computeroutput>. To skip these, add the
-  module names to the <envar>NV_EXCLUDE_KERNEL_MODULES</envar> for the
-  <command>make</command> command. The variable should be separated, as
-  such:
-  <computeroutput>NV_EXCLUDE_KERNEL_MODULES=&quot;nvidia-uvm nvidia-peermem&quot;</computeroutput>.
-  The <command>make</command> command will have the variable set to
-  nothing. Add to it as you see fit.
-</para>
-
-<para>
-  Now build the kernel modules by running the following command:
-</para>
-
-<screen><userinput>make NV_EXCLUDE_KERNEL_MODULES=</userinput></screen>
 
 <note><para>
   The source code you built the kernel from must be in the same location
   you built the kernel. For example, if you built the kernel in <filename
   class='directory'>/sources/linux-6.16.1</filename>, the source
-  code should stay there and must not be deleted until the 3rd party
+  code should stay there and must not be deleted until the third party
   modules have been built. Some Linux distributions get around this by
   installing development files in <filename
-  class='directory'>/usr/src</filename>, but that is out of the scope of
-  this book.
+  class='directory'>/usr/src</filename> or use DKMS, but that is out of
+  the scope of this book.
 </para></note>
 <note><para>
   You may encounter various build failures. This usually happens because
@@ -327,34 +343,66 @@ class='directory'>/usr/lib/modules</filename>.
     When you rebuild/upgrade the kernel, you will also need to reinstall
     the NVIDIA kernel modules.
   </para>
-
   <para>
     Kernel modules are installed in a versioned directory that, when they
     are built against a different kernel version, will no longer match the
     booted kernel version and cannot be used. Furthermore, there is glue
     built, so any changes to the kernel can break that glue. For kernel
-    modules in the Linux source tree, known as first-party modules, they
+    modules in the Linux source tree, known as first party modules, they
     get updated and rebuilt alongside the kernel, so issues aren't ran
-    into for first-party modules. Third-party modules aren't, however,
+    into for first-party modules. Third party modules aren't, however,
     and need to be updated/rebuilt.
   </para>
+  <para>
+    If you updated or changed the kernel (via different options) where the
+    NVIDIA driver was built against it, you will have to reinstall the driver.
+  </para>
+</important>">
+
+<!ENTITY nvidia-issue-list "<sect3>
+  <title>List of Packages With Issues</title>
 
   <para>
-    When you rebuild/upgrade the kernel against the same NVIDIA driver
-    version, you will only need to reinstall the kernel modules. You will
-    have to reinstall the driver software as well if you are upgrading from
-    a previous driver version.
+    Using this driver can come with compromises. So far, these issues seem
+    to be limited to Wayland and window managers. The list below documents
+    the known packages that have issues with this driver.
   </para>
-</important>
-<para>
-  Now as the &root; user:
-</para>
 
-<screen role='root'><userinput>make modules_install &amp;&amp;
-cd ..</userinput></screen>
+  <itemizedlist>
+    <listitem>
+      <para><ulink url='&blfs-svn;/gnome/mutter.html'>Mutter</ulink>:
+      Compile this package by applying patches and sed commands mentioned in
+      BLFS first, then run the proceeding commands:</para>
+<screen role='nodump'><userinput>find -name \*.c \
+  -exec sed -i '/&lt;EGL\/eglmesaext.h&gt;/d' {} \; &amp;&amp;
+find -name \*.h \
+  -exec sed -i '/&lt;EGL\/eglmesaext.h&gt;/d' {} \; &amp;&amp;
 
-<para>
-  If you set the <envar>KERNEL_UNAME</envar> variable, unset it now:
-</para>
+mkdir build &amp;&amp;
+cd    build &amp;&amp;
 
-<screen><userinput>unset KERNEL_UNAME</userinput></screen>">
+meson setup --prefix=/usr             \
+            --buildtype=release       \
+            -D tests=disabled         \
+            -D profiler=false         \
+            -D bash_completion=false  \
+            -D wayland_eglstream=true \
+            -D egl_device=true        \
+            ..                       &amp;&amp;
+ninja</userinput></screen>
+      <para>Install as &root; with <command>ninja install</command>.</para>
+    </listitem>
+    <listitem>
+      <para>
+        <xref linkend='xorg-server'/>: While this package works just fine,
+        the TearFree patch and configuration file will be useless as the
+        Xorg driver (<filename class='libraryfile'>nvidia_drv</filename>)
+        will be used instead of the modesetting driver. The TearFree patch
+        and configuration file is modesetting-specific. Thus, you must find
+        another way to get rid of screen tearing if that is your wish. Such
+        fixes may bog down performance drastically such that 144 FPS may
+        drop to 60 FPS.
+      </para>
+    </listitem>
+  </itemizedlist>
+</sect3>">

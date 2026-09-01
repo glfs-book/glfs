@@ -1,0 +1,577 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY pa-root "https://www.freedesktop.org/software/pulseaudio/releases">
+  <!ENTITY pulseaudio-download
+    "&pa-root;/pulseaudio-&pulseaudio-version;.tar.xz">
+]>
+
+<sect1 id="pulseaudio" xreflabel="PulseAudio-&pulseaudio-version;">
+  <?dbhtml filename="pulseaudio.html"?>
+
+  <title>PulseAudio-&pulseaudio-version;</title>
+
+  <indexterm zone="pulseaudio">
+    <primary sortas="a-PulseAudio">PulseAudio</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to PulseAudio</title>
+
+    <para>
+      PulseAudio is a sound system for POSIX OSes,
+      meaning that it is a proxy for sound applications. It allows you to do
+      advanced operations on your sound data as it passes between your
+      application and your hardware. Things like transferring the audio to a
+      different machine, changing the sample format or channel count and mixing
+      several sounds into one are easily achieved using a sound server.
+    </para>
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&pulseaudio-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">PulseAudio Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="libsndfile"/>
+    </para>
+
+    <para role="recommended">
+      <xref linkend="alsa-lib"/>,
+      <phrase revision="openrc,sysv">
+      <xref linkend="dbus-pass1"/> or
+      </phrase>
+      <xref linkend="dbus"/>,
+      <phrase revision="openrc,sysv"><xref linkend="elogind"/>,</phrase>
+      <xref linkend="glib2"/>,
+      <xref linkend="speex"/>,
+      <phrase revision="systemd"><xref linkend="systemd"/>,</phrase> and
+      <xref linkend="xorg7-lib"/>
+    </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/basicnet/avahi.html">Avahi</ulink>,
+      <ulink url="&blfs-svn;/general/bluez.html">BlueZ</ulink>,
+      <ulink url="&blfs-svn;/general/doxygen.html">Doxygen</ulink> (for documentation),
+      <ulink url="&blfs-svn;/general/fftw.html">fftw</ulink>,
+      <xref linkend="gstreamer"/>,
+      <ulink url="&blfs-svn;/x/gtk3.html">GTK-3</ulink>,
+      <ulink url="&blfs-svn;/multimedia/libsamplerate.html">libsamplerate</ulink>,
+      <ulink url="&blfs-svn;/multimedia/wireplumber.html">Wireplumber</ulink>
+      (with <ulink url="&blfs-svn;/multimedia/pipewire.html">Pipewire</ulink>),
+      <ulink url="&blfs-svn;/multimedia/sbc.html">SBC</ulink> (Bluetooth support),
+      <ulink url="&blfs-svn;/general/valgrind.html">Valgrind</ulink>,
+      <ulink url="https://jackaudio.org/">JACK</ulink>,
+      <ulink url="https://0pointer.de/lennart/projects/libasyncns/">libasyncns</ulink>,
+      <ulink url="https://www.lirc.org/">LIRC</ulink>,
+      <ulink url="https://gstreamer.freedesktop.org/src/orc/">ORC</ulink>,
+      <ulink url="https://sourceforge.net/projects/soxr/">soxr</ulink>,
+      <ulink url="https://tdb.samba.org/">TDB</ulink>,
+      <ulink url="https://freedesktop.org/software/pulseaudio/webrtc-audio-processing/">
+      WebRTC AudioProcessing</ulink>, and
+      <ulink url="&perlmod;xml-parser">XML::Parser</ulink>
+      <!--<ulink url="http://www.xenproject.org/">XEN</ulink>-->
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of PulseAudio</title>
+
+    <tip><para>
+      You may wish to use Pipewire as the audio system, rather than PulseAudio.
+      You will still need the libraries from this package, but you can disable
+      building the daemon. <ulink
+      url="&blfs-svn;/multimedia/wireplumber.html">Wireplumber</ulink> will be
+      needed. There are no complications with 32-bit, and you won't need 32-bit
+      libraries of Pipewire. Use <option>-D daemon=false</option> to disable
+      building the PulseAudio daemon. This isn't required if you want to use
+      Pipewire, so you can install this first normally, then install Pipewire
+      later.
+    </para></tip>
+
+<!--
+    <para>
+      If <xref linkend="doxygen"/> is not installed, workaround a building
+      issue because of the changes in meson-0.57.2:
+    </para>
+
+<screen><userinput>sed '/doxygen/d' -i meson.build</userinput></screen>
+-->
+    <para>
+      Install PulseAudio by running the following
+      commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            -D database=gdbm    \
+            -D doxygen=false    \
+            -D bluez5=disabled  \
+            -D man=false        \
+            -D tests=false      \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+    <!-- http://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/SystemWide/ -->
+    <para>Running PulseAudio as a system-wide daemon is possible but not
+      recommended. See <ulink
+      url="https://www.freedesktop.org/wiki/Software/PulseAudio/Documentation/User/SystemWide/"/>
+      for more information.
+      While still as the <systemitem class="username">root</systemitem>
+      user, remove the D-Bus configuration file
+      for the system wide daemon to avoid creating unnecessary system
+      users and groups:
+    </para>
+
+<screen role="root"><userinput>rm /usr/share/dbus-1/system.d/pulseaudio-system.conf</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of PulseAudio</title>
+
+    <para>
+      Install lib32-PulseAudio by running the following
+      commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            --cross-file=lib32  \
+            -D database=gdbm    \
+            -D doxygen=false    \
+            -D bluez5=disabled  \
+            -D man=false        \
+            -D tests=false      \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install    &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D doxygen=false</parameter>: This allows the package to
+      compile as Doxygen is not installed.
+    </para>
+
+    <para>
+      <parameter>-D bluez5=disabled</parameter>: This switch prevents
+      a runtime error if dbus and SBC
+      are both installed but BlueZ is not installed.
+      Remove this if you have installed all three packages.
+    </para>
+
+    <para>
+      <parameter>-D man=false</parameter>: This switch disables generation
+      of man pages which relies on XML::Parser. If you have it, remove this
+      parameter.
+    </para>
+
+    <para>
+      <parameter>-D tests=false</parameter>: This switch disables building
+      tests as they require Check.
+    </para>
+
+<!--
+    <para>
+      <parameter>- -disable-rpath</parameter>: This switch prevents
+      linker from adding a hardcoded runtime path to the installed
+      programs and libraries.
+    </para>-->
+
+    <para>
+      <option>-D daemon=false</option>: This option disables building the
+      daemon if you want to use Pipewire as the audio system instead.
+    </para>
+
+  </sect2>
+
+  <sect2 role="configuration">
+    <title>Configuring PulseAudio</title>
+
+    <sect3 id="pulseaudio-config">
+      <title>Config Files</title>
+      <para>
+        There are system wide configuration files:
+        <filename>/etc/pulse/daemon.conf</filename>,
+        <filename>/etc/pulse/client.conf</filename>,
+        <filename>/etc/pulse/default.pa</filename>, and user configuration
+        files with the same names in
+        <filename class="directory">~/.config/pulse</filename>. User
+        configuration files take precedence over system wide ones.
+      </para>
+
+      <indexterm zone="pulseaudio pulseaudio-config">
+        <primary sortas="e-AA.config-pulse">~/.config/pulse</primary>
+      </indexterm>
+
+      <indexterm zone="pulseaudio pulseaudio-config">
+        <primary
+        sortas="e-etc-pulse-daemon.conf">/etc/pulse/daemon.conf</primary>
+      </indexterm>
+
+      <indexterm zone="pulseaudio pulseaudio-config">
+        <primary
+        sortas="e-etc-pulse-client.conf">/etc/pulse/client.conf</primary>
+      </indexterm>
+
+      <indexterm zone="pulseaudio pulseaudio-config">
+        <primary
+        sortas="e-etc-pulse-default.pa">/etc/pulse/default.pa</primary>
+      </indexterm>
+    </sect3>
+
+    <sect3><title>Configuration Information</title>
+<!--
+      <para>
+        The default configuration files allow setting up a working installation.
+        However, a reference to Console-Kit needs to be removed.
+        Issue the following command as the
+        <systemitem class="username">root</systemitem> user:
+      </para>
+
+<screen role="root"><userinput>sed -i '/load-module module-console-kit/s/^/#/' /etc/pulse/default.pa</userinput></screen>
+
+       In 13.0 this is protected via .ifexists module-console-kit
+-->
+      <para>
+        You may have to configure the audio system. You can start
+        pulseaudio in command line mode using
+        <command>pulseaudio -C</command> and then list various
+        information and change settings. See
+        <command>man pulse-cli-syntax</command>.
+      </para>
+
+      <para>
+        Furthermore, if this package was not built with
+        <phrase revision="openrc,sysv"><xref linkend="elogind"/>
+        support,</phrase> <phrase revision="systemd"> <xref
+        linkend="systemd"/>,</phrase> add any non-root users to the
+        <systemitem class='groupname'>audio</systemitem> group as the
+        <systemitem class="username">root</systemitem> user:
+      </para>
+
+<screen role="root"><literal>usermod -a -G audio <replaceable>&lt;username&gt;</replaceable></literal></screen>
+
+      <para>
+        If pulseaudio was working but you no-longer
+        have sound, after checking for hardware issues (speakers or headphones
+        not connected, external amplifier not connected) you may need to fix it.
+      </para>
+
+      <para>
+        One suggestion is to close the application, such as
+        firefox where sound has stopped working, then
+        run: <command>pactl list short sinks</command> followed by:
+        <command>pacmd set-default-sink &lt;sink #&gt;</command> and then
+        restart the application.
+      </para>
+
+      <para>
+        If that does not work, a more drastic approach often works. After closing
+        the application, close pulseaudio, either using <command>pulseaudio
+        --kill</command> or, if that fails, <command>killall -KILL
+        pulseaudio</command> and then <command>rm -rf
+        ~/.config/pulse/*</command> (and perhaps also
+        <command>rm -rf ~/.pulse/*</command> if you have used a very old version
+        of pulse on this machine), then run <command>pulseaudio
+        --verbose</command> to restart it. If the daemon starts, restart the
+        application. See <command>man pulseaudio</command> for more options.
+      </para>
+
+    </sect3>
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          <!--esdcompat,--> pacat, pacmd, pactl, padsp,
+          pamon (symlink to pacat), paplay (symlink to pacat),
+          parec (symlink to pacat), parecord (symlink to pacat), qpaeq,
+          pasuspender, pax11publish, pulseaudio, and
+          <!-- it looks like the equalizer needs FFTW: qpaeq, -->
+          start-pulseaudio-x11
+        </seg>
+        <seg>
+          libpulse,
+          libpulse-mainloop-glib,
+          libpulse-simple,
+          libpulsecommon-&pulseaudio-major-version;,
+          libpulsecore-&pulseaudio-major-version;, and
+          libpulsedsp
+        </seg>
+        <seg>
+          /etc/pulse,
+          /usr/include/pulse,
+          /usr/lib/cmake/PulseAudio,
+          /usr/lib/{pulseaudio,pulse-&pulseaudio-major-version;},
+          /usr/libexec/pulse, and
+          /usr/share/pulseaudio
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+<!--
+      <varlistentry id="esdcompat">
+        <term><command>esdcompat</command></term>
+        <listitem>
+          <para>
+            is the PulseAudio ESD wrapper script.
+          </para>
+          <indexterm zone="pulseaudio esdcompat">
+            <primary sortas="b-esdcompat">esdcompat</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+-->
+
+      <varlistentry id="pacat">
+        <term><command>pacat</command></term>
+        <listitem>
+          <para>
+            plays back or records raw or encoded audio streams on a
+            PulseAudio sound server
+          </para>
+          <indexterm zone="pulseaudio pacat">
+            <primary sortas="b-pacat">pacat</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pacmd">
+        <term><command>pacmd</command></term>
+        <listitem>
+          <para>
+            is a tool used to reconfigure a PulseAudio
+            sound server during runtime
+          </para>
+          <indexterm zone="pulseaudio pacmd">
+            <primary sortas="b-pacmd">pacmd</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pactl">
+        <term><command>pactl</command></term>
+        <listitem>
+          <para>
+            is used to control a running PulseAudio
+            sound server
+          </para>
+          <indexterm zone="pulseaudio pactl">
+            <primary sortas="b-pactl">pactl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="padsp">
+        <term><command>padsp</command></term>
+        <listitem>
+          <para>
+            is the PulseAudio OSS Wrapper
+          </para>
+          <indexterm zone="pulseaudio padsp">
+            <primary sortas="b-padsp">padsp</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pamon">
+        <term><command>pamon</command></term>
+        <listitem>
+          <para>
+            is a symbolic link to <command>pacat</command>
+           </para>
+          <indexterm zone="pulseaudio pamon">
+            <primary sortas="b-pamon">pamon</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="paplay">
+        <term><command>paplay</command></term>
+        <listitem>
+          <para>
+            is used to play audio files on a
+            PulseAudio sound server
+          </para>
+          <indexterm zone="pulseaudio paplay">
+            <primary sortas="b-paplay">paplay</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="parec">
+        <term><command>parec</command></term>
+        <listitem>
+          <para>
+            is a symbolic link to <command>pacat</command>
+          </para>
+          <indexterm zone="pulseaudio parec">
+            <primary sortas="b-parec">parec</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="parecord">
+        <term><command>parecord</command></term>
+        <listitem>
+          <para>
+            is a symbolic link to <command>pacat</command>
+          </para>
+          <indexterm zone="pulseaudio parecord">
+            <primary sortas="b-parecord">parecord</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pasuspender">
+        <term><command>pasuspender</command></term>
+        <listitem>
+          <para>
+            is a tool that can be used to tell a local
+            PulseAudio sound server to temporarily
+            suspend access to the audio devices, to allow other applications
+            to access them directly
+          </para>
+          <indexterm zone="pulseaudio pasuspender">
+            <primary sortas="b-pasuspender">pasuspender</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pax11publish">
+        <term><command>pax11publish</command></term>
+        <listitem>
+          <para>
+            is the PulseAudio
+            X11 Credential Utility
+          </para>
+          <indexterm zone="pulseaudio pax11publish">
+            <primary sortas="b-pax11publish">pax11publish</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pa-info">
+        <term><command>pa-info</command></term>
+        <listitem>
+          <para>
+            is a shell script that prints various information relating to the
+            Pulseaudio server currently in use
+          </para>
+          <indexterm zone="pulseaudio pa-info">
+            <primary sortas="b-pa-info">pa-info</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="pulseaudio-prog">
+        <term><command>pulseaudio</command></term>
+        <listitem>
+          <para>
+            is a networked low-latency sound server for Linux
+          </para>
+          <indexterm zone="pulseaudio pulseaudio-prog">
+            <primary sortas="b-pulseaudio">pulseaudio</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+<!-- only installed if FFTW is present -->
+      <varlistentry id="qpaeq">
+        <term><command>qpaeq</command></term>
+        <listitem>
+          <para>
+            is an equalizer interface for
+            PulseAudio equalizer sinks
+            (Requires fftw at build time)
+          </para>
+          <indexterm zone="pulseaudio qpaeq">
+            <primary sortas="b-qpaeq">qpaeq</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+<!-- Not found in PA 7.0
+      <varlistentry id="start-pulseaudio-kde">
+        <term><command>start-pulseaudio-kde</command></term>
+        <listitem>
+          <para>
+            Starts PulseAudio and loads
+            module-device-manager to use KDE routing policies.
+          </para>
+          <indexterm zone="pulseaudio start-pulseaudio-kde">
+            <primary sortas="b-start-pulseaudio-kde">start-pulseaudio-kde</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+-->
+      <varlistentry id="start-pulseaudio-x11">
+        <term><command>start-pulseaudio-x11</command></term>
+        <listitem>
+          <para>
+            starts PulseAudio and registers it to
+            the X11 session manager
+          </para>
+          <indexterm zone="pulseaudio start-pulseaudio-x11">
+            <primary sortas="b-start-pulseaudio-x11">start-pulseaudio-x11</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

@@ -33,8 +33,10 @@ else
 endif
 
 ifneq ($(REV), systemd)
-  ifneq ($(REV), sysv)
-    $(error REV must be 'systemd' (default) or 'sysv' (not maintained))
+  ifneq ($(REV), openrc)
+    ifneq ($(REV), sysv)
+      $(error REV must be 'systemd' (default), 'openrc', or 'sysv' (not maintained))
+    endif
   endif
 endif
 
@@ -52,7 +54,15 @@ ifeq ($(REV), systemd)
   GLFSHTML        ?= glfs-html.xml
   GLFSHTML2       ?= glfs-html2.xml
   GLFSFULL        ?= glfs-full.xml
-else
+endif
+ifeq ($(REV), openrc)
+  BASEDIR         ?= $(HTML_ROOT)/glfs-openrc
+  DUMPDIR         ?= $(DUMP_ROOT)/glfs-openrc-commands
+  GLFSHTML        ?= glfs-openrc-html.xml
+  GLFSHTML2       ?= glfs-openrc-html2.xml
+  GLFSFULL        ?= glfs-openrc-full.xml
+endif
+ifeq ($(REV), sysv)
   BASEDIR         ?= $(HTML_ROOT)/glfs-sysv
   DUMPDIR         ?= $(DUMP_ROOT)/glfs-sysv-commands
   GLFSHTML        ?= glfs-sysv-html.xml
@@ -71,12 +81,14 @@ help:
 	@echo "  REV=<rev>            Build variation of book"
 	@echo "                       Valid values for REV are:"
 	@echo "                       * systemd - Build book for Systemd"
-	@echo "                       * sysv    - Build book for SysV"
+	@echo "                       * openrc  - Build book for OpenRC"
+	@echo "                       * sysv    - Build book for SysVinit"
 	@echo "                       Defaults to 'systemd'"
 	@echo ""
 	@echo "  BASEDIR=<dir>        Put the output in directory <dir>."
 	@echo "                       Defaults to"
-	@echo "                       '$(HTML_ROOT)/glfs' if REV=systemd (or unset)"
+	@echo "                       '$(HTML_ROOT)/glfs' if REV=systemd (or unset),"
+	@echo "                       '$(HTML_ROOT)/glfs-openrc' if REV=openrc,"
 	@echo "                       or to"
 	@echo "                       '$(HTML_ROOT)/glfs-sysv' if REV=sysv"
 	@echo ""
@@ -160,7 +172,7 @@ $(RENDERTMP)/$(GLFSHTML): $(RENDERTMP)/$(GLFSFULL) version
 
 downloads: $(BASEDIR)/download
 $(BASEDIR)/download: html
-	@echo "Copying downloadable content at $(BASEDIR)/download ..."
+	@echo "Copying downloadable content to $(BASEDIR)/download..."
 	$(Q)mkdir -p $(BASEDIR)/download
 	$(Q)rm -rf $(BASEDIR)/download/*
 	$(Q)cp -R download/* $(BASEDIR)/download
@@ -169,7 +181,7 @@ $(BASEDIR)/download: html
 
 wget-list: $(BASEDIR)/download/wget-list
 $(BASEDIR)/download/wget-list: $(RENDERTMP)/$(GLFSFULL) version html downloads
-	@echo "Generating wget list for $(REV) at $(BASEDIR)/download/wget-list ..."
+	@echo "Generating $(REV) wget-list to $(BASEDIR)/download..."
 	$(Q)xsltproc --nonet                                \
                 --output $(BASEDIR)/download/wget-list \
                 stylesheets/wget-list.xsl              \
@@ -183,13 +195,13 @@ $(BASEDIR)/archive: html
 
 assets: $(BASEDIR)/stylesheets $(BASEDIR)/images
 $(BASEDIR)/stylesheets: html
-	@echo "Copying CSS ..."
+	@echo "Copying CSS..."
 	$(Q)mkdir -p $(BASEDIR)/stylesheets
 	$(Q)cp $(THEME_PATH)/$(THEME).lfs.css $(BASEDIR)/stylesheets/lfs.css
 	$(Q)cp stylesheets/lfs-xsl/lfs-print.css $(BASEDIR)/stylesheets
 	$(Q)sed -i 's|../stylesheet|stylesheet|' $(BASEDIR)/index.html
 $(BASEDIR)/images: html
-	@echo "Copying images ..."
+	@echo "Copying images..."
 	$(Q)mkdir -p $(BASEDIR)/images
 	$(Q)cp -R images/* $(BASEDIR)/images
 	$(Q)cd $(BASEDIR)/; sed -e "s@../images@images@g" -i *.html

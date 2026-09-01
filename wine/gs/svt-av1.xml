@@ -116,6 +116,11 @@ ldconfig</userinput></screen>
       versions of the libraries.
     </para>
 
+    <para>
+      <option>-D NATIVE=OFF</option>: Use this option if you dont want to
+      produce native binaries, making switching systems less of a hassle.
+    </para>
+
   </sect2>
 
   <sect2 role="content">

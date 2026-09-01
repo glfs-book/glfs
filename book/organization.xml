@@ -8,7 +8,6 @@
 <sect1 id="organization" xreflabel="Organization">
   <?dbhtml filename="organization.html"?>
 
-
   <title>Organization</title>
 
   <para>
@@ -22,13 +21,14 @@
     understand the rest of the book.
   </para>
 
-  <bridgehead renderas="sect2">Part II - Shared Dependencies</bridgehead>
+  <bridgehead renderas="sect2">Part II - Core Components</bridgehead>
 
   <para>
-    This section is dedicated to covering dependencies that are shared
-    between Steam and Wine. As it turns out, there are quite a lot of
-    dependencies they both depend on. Anything specific to Steam and
-    Wine are covered in their respective chapters.
+    This section is dedicated to covering core components like security,
+    audio, and graphics. Steam, Wine, and other packages will pick from
+    this section quite heavily. You have some choice on what to install,
+    depending on your use case. This section is laid out linearly, like
+    all the other sections.
   </para>
 
   <bridgehead renderas="sect2">Part III - Steam</bridgehead>

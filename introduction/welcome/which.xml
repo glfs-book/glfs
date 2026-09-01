@@ -33,7 +33,7 @@
   </para>
 
   <para>
-    The following section is Shared Dependencies. Every user
+    The following section is Core Components. Every user
     who wants Steam and/or Wine will want to read this chapter
     as both projects use the packages. Most of this chapter is
     necessary. However, it is recommended to check the dependency

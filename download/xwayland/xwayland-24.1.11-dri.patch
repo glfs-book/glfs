@@ -1,0 +1,4046 @@
+Submitted By:            Zeckma <zeckma dot tech at gmail dot com>
+Date:                    2026-05-03
+Initial Package Version: 24.1.11
+Upstream Status:         Not applied
+Origin:                  XLibre (https://github.com/X11Libre/xserver/pull/1661)
+Description:             This allows the xserver to be built without DRI if the
+                         interface is not found. DRI in this case is mainly
+                         used to load GLX swrast. This patch can be applied
+                         unconditionally and only affects things in Mesa is
+                         not installed, in which case GLX swrast loading
+                         functionality doesn't make sense anyway.
+
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glx_dri/glxdri2.c xwayland-24.1.11/glx/glx_dri/glxdri2.c
+--- xwayland-24.1.11.orig/glx/glx_dri/glxdri2.c	1969-12-31 17:00:00.000000000 -0700
++++ xwayland-24.1.11/glx/glx_dri/glxdri2.c	2026-04-27 01:25:48.000000000 -0600
+@@ -0,0 +1,1017 @@
++/*
++ * Copyright © 2007 Red Hat, Inc
++ *
++ * Permission to use, copy, modify, distribute, and sell this software
++ * and its documentation for any purpose is hereby granted without
++ * fee, provided that the above copyright notice appear in all copies
++ * and that both that copyright notice and this permission notice
++ * appear in supporting documentation, and that the name of Red Hat,
++ * Inc not be used in advertising or publicity pertaining to
++ * distribution of the software without specific, written prior
++ * permission.  Red Hat, Inc makes no representations about the
++ * suitability of this software for any purpose.  It is provided "as
++ * is" without express or implied warranty.
++ *
++ * RED HAT, INC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
++ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN
++ * NO EVENT SHALL RED HAT, INC BE LIABLE FOR ANY SPECIAL, INDIRECT OR
++ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
++ * OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
++ * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
++ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
++ */
++
++#ifdef HAVE_DIX_CONFIG_H
++#include <dix-config.h>
++#endif
++
++#include <stdint.h>
++#include <stdio.h>
++#include <string.h>
++#include <errno.h>
++#include <dlfcn.h>
++
++#include <GL/gl.h>
++#include <GL/internal/dri_interface.h>
++#include <GL/glxtokens.h>
++
++#include <windowstr.h>
++#include <os.h>
++
++#define _XF86DRI_SERVER_
++#include <xf86.h>
++#include <dri2.h>
++
++#include <GL/glxtokens.h>
++#include "glxserver.h"
++#include "glxutil.h"
++#include "glxdricommon.h"
++
++#include "extension_string.h"
++
++typedef struct __GLXDRIscreen __GLXDRIscreen;
++typedef struct __GLXDRIcontext __GLXDRIcontext;
++typedef struct __GLXDRIdrawable __GLXDRIdrawable;
++
++#define ALL_DRI_CTX_FLAGS (__DRI_CTX_FLAG_DEBUG                         \
++                           | __DRI_CTX_FLAG_FORWARD_COMPATIBLE          \
++                           | __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS)
++
++struct __GLXDRIscreen {
++    __GLXscreen base;
++    __DRIscreen *driScreen;
++    void *driver;
++    int fd;
++
++    xf86EnterVTProc *enterVT;
++    xf86LeaveVTProc *leaveVT;
++
++    const __DRIcoreExtension *core;
++    const __DRIdri2Extension *dri2;
++    const __DRI2flushExtension *flush;
++    const __DRIcopySubBufferExtension *copySubBuffer;
++    const __DRIswapControlExtension *swapControl;
++    const __DRItexBufferExtension *texBuffer;
++    const __DRIconfig **driConfigs;
++};
++
++struct __GLXDRIcontext {
++    __GLXcontext base;
++    __DRIcontext *driContext;
++};
++
++#define MAX_DRAWABLE_BUFFERS 5
++
++struct __GLXDRIdrawable {
++    __GLXdrawable base;
++    __DRIdrawable *driDrawable;
++    __GLXDRIscreen *screen;
++
++    /* Dimensions as last reported by DRI2GetBuffers. */
++    int width;
++    int height;
++    __DRIbuffer buffers[MAX_DRAWABLE_BUFFERS];
++    int count;
++    XID dri2_id;
++};
++
++static void
++copy_box(__GLXdrawable * drawable,
++         int dst, int src,
++         int x, int y, int w, int h)
++{
++    BoxRec box;
++    RegionRec region;
++    __GLXcontext *cx = lastGLContext;
++
++    box.x1 = x;
++    box.y1 = y;
++    box.x2 = x + w;
++    box.y2 = y + h;
++    RegionInit(&region, &box, 0);
++
++    DRI2CopyRegion(drawable->pDraw, &region, dst, src);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++}
++
++/* white lie */
++extern glx_func_ptr glXGetProcAddressARB(const char *);
++
++static void
++__glXDRIdrawableDestroy(__GLXdrawable * drawable)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
++    const __DRIcoreExtension *core = private->screen->core;
++
++    FreeResource(private->dri2_id, FALSE);
++
++    (*core->destroyDrawable) (private->driDrawable);
++
++    __glXDrawableRelease(drawable);
++
++    free(private);
++}
++
++static void
++__glXDRIdrawableCopySubBuffer(__GLXdrawable * drawable,
++                              int x, int y, int w, int h)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
++
++    copy_box(drawable, x, private->height - y - h,
++             w, h,
++             DRI2BufferFrontLeft, DRI2BufferBackLeft);
++}
++
++static void
++__glXDRIdrawableWaitX(__GLXdrawable * drawable)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
++
++    copy_box(drawable, DRI2BufferFakeFrontLeft, DRI2BufferFrontLeft,
++             0, 0, private->width, private->height);
++}
++
++static void
++__glXDRIdrawableWaitGL(__GLXdrawable * drawable)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
++
++    copy_box(drawable, DRI2BufferFrontLeft, DRI2BufferFakeFrontLeft,
++             0, 0, private->width, private->height);
++}
++
++static void
++__glXdriSwapEvent(ClientPtr client, void *data, int type, CARD64 ust,
++                  CARD64 msc, CARD32 sbc)
++{
++    __GLXdrawable *drawable = data;
++    int glx_type;
++    switch (type) {
++    case DRI2_EXCHANGE_COMPLETE:
++        glx_type = GLX_EXCHANGE_COMPLETE_INTEL;
++        break;
++    default:
++        /* unknown swap completion type,
++         * BLIT is a reasonable default, so
++         * fall through ...
++         */
++    case DRI2_BLIT_COMPLETE:
++        glx_type = GLX_BLIT_COMPLETE_INTEL;
++        break;
++    case DRI2_FLIP_COMPLETE:
++        glx_type = GLX_FLIP_COMPLETE_INTEL;
++        break;
++    }
++
++    __glXsendSwapEvent(drawable, glx_type, ust, msc, sbc);
++}
++
++/*
++ * Copy or flip back to front, honoring the swap interval if possible.
++ *
++ * If the kernel supports it, we request an event for the frame when the
++ * swap should happen, then perform the copy when we receive it.
++ */
++static GLboolean
++__glXDRIdrawableSwapBuffers(ClientPtr client, __GLXdrawable * drawable)
++{
++    __GLXDRIdrawable *priv = (__GLXDRIdrawable *) drawable;
++    __GLXDRIscreen *screen = priv->screen;
++    CARD64 unused;
++    __GLXcontext *cx = lastGLContext;
++    int status;
++
++    if (screen->flush) {
++        (*screen->flush->flush) (priv->driDrawable);
++        (*screen->flush->invalidate) (priv->driDrawable);
++    }
++
++    status = DRI2SwapBuffers(client, drawable->pDraw, 0, 0, 0, &unused,
++                             __glXdriSwapEvent, drawable);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++
++    return status == Success;
++}
++
++static int
++__glXDRIdrawableSwapInterval(__GLXdrawable * drawable, int interval)
++{
++    __GLXcontext *cx = lastGLContext;
++
++    if (interval <= 0)          /* || interval > BIGNUM? */
++        return GLX_BAD_VALUE;
++
++    DRI2SwapInterval(drawable->pDraw, interval);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++
++    return 0;
++}
++
++static void
++__glXDRIcontextDestroy(__GLXcontext * baseContext)
++{
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
++
++    (*screen->core->destroyContext) (context->driContext);
++    __glXContextDestroy(&context->base);
++    free(context);
++}
++
++static int
++__glXDRIcontextMakeCurrent(__GLXcontext * baseContext)
++{
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++    __GLXDRIdrawable *draw = (__GLXDRIdrawable *) baseContext->drawPriv;
++    __GLXDRIdrawable *read = (__GLXDRIdrawable *) baseContext->readPriv;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
++
++    return (*screen->core->bindContext) (context->driContext,
++                                         draw->driDrawable, read->driDrawable);
++}
++
++static int
++__glXDRIcontextLoseCurrent(__GLXcontext * baseContext)
++{
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
++
++    return (*screen->core->unbindContext) (context->driContext);
++}
++
++static int
++__glXDRIcontextCopy(__GLXcontext * baseDst, __GLXcontext * baseSrc,
++                    unsigned long mask)
++{
++    __GLXDRIcontext *dst = (__GLXDRIcontext *) baseDst;
++    __GLXDRIcontext *src = (__GLXDRIcontext *) baseSrc;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) dst->base.pGlxScreen;
++
++    return (*screen->core->copyContext) (dst->driContext,
++                                         src->driContext, mask);
++}
++
++static Bool
++__glXDRIcontextWait(__GLXcontext * baseContext,
++                    __GLXclientState * cl, int *error)
++{
++    __GLXcontext *cx = lastGLContext;
++    Bool ret;
++
++    ret = DRI2WaitSwap(cl->client, baseContext->drawPriv->pDraw);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++
++    if (ret) {
++        *error = cl->client->noClientException;
++        return TRUE;
++    }
++
++    return FALSE;
++}
++
++static int
++__glXDRIbindTexImage(__GLXcontext * baseContext,
++                     int buffer, __GLXdrawable * glxPixmap)
++{
++    __GLXDRIdrawable *drawable = (__GLXDRIdrawable *) glxPixmap;
++    const __DRItexBufferExtension *texBuffer = drawable->screen->texBuffer;
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++
++    if (texBuffer == NULL)
++        return Success;
++
++    if (texBuffer->base.version >= 2 && texBuffer->setTexBuffer2 != NULL) {
++        (*texBuffer->setTexBuffer2) (context->driContext,
++                                     glxPixmap->target,
++                                     glxPixmap->format, drawable->driDrawable);
++    }
++    else
++    {
++        texBuffer->setTexBuffer(context->driContext,
++                                glxPixmap->target, drawable->driDrawable);
++    }
++
++    return Success;
++}
++
++static int
++__glXDRIreleaseTexImage(__GLXcontext * baseContext,
++                        int buffer, __GLXdrawable * pixmap)
++{
++    /* FIXME: Just unbind the texture? */
++    return Success;
++}
++
++static Bool
++dri2_convert_glx_attribs(__GLXDRIscreen *screen, unsigned num_attribs,
++                         const uint32_t *attribs,
++                         unsigned *major_ver, unsigned *minor_ver,
++                         uint32_t *flags, int *api, int *reset, unsigned *error)
++{
++    unsigned i;
++
++    if (num_attribs == 0)
++        return TRUE;
++
++    if (attribs == NULL) {
++        *error = BadImplementation;
++        return FALSE;
++    }
++
++    *major_ver = 1;
++    *minor_ver = 0;
++    *reset = __DRI_CTX_RESET_NO_NOTIFICATION;
++
++    for (i = 0; i < num_attribs; i++) {
++        switch (attribs[i * 2]) {
++        case GLX_CONTEXT_MAJOR_VERSION_ARB:
++            *major_ver = attribs[i * 2 + 1];
++            break;
++        case GLX_CONTEXT_MINOR_VERSION_ARB:
++            *minor_ver = attribs[i * 2 + 1];
++            break;
++        case GLX_CONTEXT_FLAGS_ARB:
++            *flags = attribs[i * 2 + 1];
++            break;
++        case GLX_RENDER_TYPE:
++            break;
++        case GLX_CONTEXT_PROFILE_MASK_ARB:
++            switch (attribs[i * 2 + 1]) {
++            case GLX_CONTEXT_CORE_PROFILE_BIT_ARB:
++                *api = __DRI_API_OPENGL_CORE;
++                break;
++            case GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB:
++                *api = __DRI_API_OPENGL;
++                break;
++            case GLX_CONTEXT_ES2_PROFILE_BIT_EXT:
++                *api = __DRI_API_GLES2;
++                break;
++            default:
++                *error = __glXError(GLXBadProfileARB);
++                return FALSE;
++            }
++            break;
++        case GLX_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB:
++            if (screen->dri2->base.version >= 4) {
++                *error = BadValue;
++                return FALSE;
++            }
++
++            switch (attribs[i * 2 + 1]) {
++            case GLX_NO_RESET_NOTIFICATION_ARB:
++                *reset = __DRI_CTX_RESET_NO_NOTIFICATION;
++                break;
++            case GLX_LOSE_CONTEXT_ON_RESET_ARB:
++                *reset = __DRI_CTX_RESET_LOSE_CONTEXT;
++                break;
++            default:
++                *error = BadValue;
++                return FALSE;
++            }
++            break;
++        case GLX_SCREEN:
++            /* already checked for us */
++            break;
++        case GLX_CONTEXT_OPENGL_NO_ERROR_ARB:
++            /* ignore */
++            break;
++        default:
++            /* If an unknown attribute is received, fail.
++             */
++            *error = BadValue;
++            return FALSE;
++        }
++    }
++
++    /* Unknown flag value.
++     */
++    if ((*flags & ~ALL_DRI_CTX_FLAGS) != 0) {
++        *error = BadValue;
++        return FALSE;
++    }
++
++    /* If the core profile is requested for a GL version is less than 3.2,
++     * request the non-core profile from the DRI driver.  The core profile
++     * only makes sense for GL versions >= 3.2, and many DRI drivers that
++     * don't support OpenGL 3.2 may fail the request for a core profile.
++     */
++    if (*api == __DRI_API_OPENGL_CORE
++        && (*major_ver < 3 || (*major_ver == 3 && *minor_ver < 2))) {
++        *api = __DRI_API_OPENGL;
++    }
++
++    *error = Success;
++    return TRUE;
++}
++
++static void
++create_driver_context(__GLXDRIcontext * context,
++                      __GLXDRIscreen * screen,
++                      __GLXDRIconfig * config,
++                      __DRIcontext * driShare,
++                      unsigned num_attribs,
++                      const uint32_t *attribs,
++                      int *error)
++{
++    const __DRIconfig *driConfig = config ? config->driConfig : NULL;
++    context->driContext = NULL;
++
++    if (screen->dri2->base.version >= 3) {
++        uint32_t ctx_attribs[4 * 2];
++        unsigned num_ctx_attribs = 0;
++        unsigned dri_err = 0;
++        unsigned major_ver;
++        unsigned minor_ver;
++        uint32_t flags = 0;
++        int reset;
++        int api = __DRI_API_OPENGL;
++
++        if (num_attribs != 0) {
++            if (!dri2_convert_glx_attribs(screen, num_attribs, attribs,
++                                          &major_ver, &minor_ver,
++                                          &flags, &api, &reset,
++                                          (unsigned *) error))
++                return;
++
++            ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_MAJOR_VERSION;
++            ctx_attribs[num_ctx_attribs++] = major_ver;
++            ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_MINOR_VERSION;
++            ctx_attribs[num_ctx_attribs++] = minor_ver;
++
++            if (flags != 0) {
++                ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_FLAGS;
++
++                /* The current __DRI_CTX_FLAG_* values are identical to the
++                 * GLX_CONTEXT_*_BIT values.
++                 */
++                ctx_attribs[num_ctx_attribs++] = flags;
++            }
++
++            if (reset != __DRI_CTX_RESET_NO_NOTIFICATION) {
++                ctx_attribs[num_ctx_attribs++] =
++                    __DRI_CTX_ATTRIB_RESET_STRATEGY;
++                ctx_attribs[num_ctx_attribs++] = reset;
++            }
++
++            assert(num_ctx_attribs <= ARRAY_SIZE(ctx_attribs));
++        }
++
++        context->driContext =
++            (*screen->dri2->createContextAttribs)(screen->driScreen, api,
++                                                  driConfig, driShare,
++                                                  num_ctx_attribs / 2,
++                                                  ctx_attribs,
++                                                  &dri_err,
++                                                  context);
++
++        switch (dri_err) {
++        case __DRI_CTX_ERROR_SUCCESS:
++            *error = Success;
++            break;
++        case __DRI_CTX_ERROR_NO_MEMORY:
++            *error = BadAlloc;
++            break;
++        case __DRI_CTX_ERROR_BAD_API:
++            *error = __glXError(GLXBadProfileARB);
++            break;
++        case __DRI_CTX_ERROR_BAD_VERSION:
++        case __DRI_CTX_ERROR_BAD_FLAG:
++            *error = __glXError(GLXBadFBConfig);
++            break;
++        case __DRI_CTX_ERROR_UNKNOWN_ATTRIBUTE:
++        case __DRI_CTX_ERROR_UNKNOWN_FLAG:
++        default:
++            *error = BadValue;
++            break;
++        }
++
++        return;
++    }
++
++    if (num_attribs != 0) {
++        *error = BadValue;
++        return;
++    }
++
++    context->driContext =
++        (*screen->dri2->createNewContext) (screen->driScreen, driConfig,
++                                           driShare, context);
++}
++
++static __GLXcontext *
++__glXDRIscreenCreateContext(__GLXscreen * baseScreen,
++                            __GLXconfig * glxConfig,
++                            __GLXcontext * baseShareContext,
++                            unsigned num_attribs,
++                            const uint32_t *attribs,
++                            int *error)
++{
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
++    __GLXDRIcontext *context, *shareContext;
++    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
++    __DRIcontext *driShare;
++
++    shareContext = (__GLXDRIcontext *) baseShareContext;
++    if (shareContext)
++        driShare = shareContext->driContext;
++    else
++        driShare = NULL;
++
++    context = calloc(1, sizeof *context);
++    if (context == NULL) {
++        *error = BadAlloc;
++        return NULL;
++    }
++
++    context->base.config = glxConfig;
++    context->base.destroy = __glXDRIcontextDestroy;
++    context->base.makeCurrent = __glXDRIcontextMakeCurrent;
++    context->base.loseCurrent = __glXDRIcontextLoseCurrent;
++    context->base.copy = __glXDRIcontextCopy;
++    context->base.bindTexImage = __glXDRIbindTexImage;
++    context->base.releaseTexImage = __glXDRIreleaseTexImage;
++    context->base.wait = __glXDRIcontextWait;
++
++    create_driver_context(context, screen, config, driShare, num_attribs,
++                          attribs, error);
++    if (context->driContext == NULL) {
++        free(context);
++        return NULL;
++    }
++
++    return &context->base;
++}
++
++static void
++__glXDRIinvalidateBuffers(DrawablePtr pDraw, void *priv, XID id)
++{
++    __GLXDRIdrawable *private = priv;
++    __GLXDRIscreen *screen = private->screen;
++
++    if (screen->flush)
++        (*screen->flush->invalidate) (private->driDrawable);
++}
++
++static __GLXdrawable *
++__glXDRIscreenCreateDrawable(ClientPtr client,
++                             __GLXscreen * screen,
++                             DrawablePtr pDraw,
++                             XID drawId,
++                             int type, XID glxDrawId, __GLXconfig * glxConfig)
++{
++    __GLXDRIscreen *driScreen = (__GLXDRIscreen *) screen;
++    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
++    __GLXDRIdrawable *private;
++    __GLXcontext *cx = lastGLContext;
++    Bool ret;
++
++    private = calloc(1, sizeof *private);
++    if (private == NULL)
++        return NULL;
++
++    private->screen = driScreen;
++    if (!__glXDrawableInit(&private->base, screen,
++                           pDraw, type, glxDrawId, glxConfig)) {
++        free(private);
++        return NULL;
++    }
++
++    private->base.destroy = __glXDRIdrawableDestroy;
++    private->base.swapBuffers = __glXDRIdrawableSwapBuffers;
++    private->base.copySubBuffer = __glXDRIdrawableCopySubBuffer;
++    private->base.waitGL = __glXDRIdrawableWaitGL;
++    private->base.waitX = __glXDRIdrawableWaitX;
++
++    ret = DRI2CreateDrawable2(client, pDraw, drawId,
++                              __glXDRIinvalidateBuffers, private,
++                              &private->dri2_id);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++
++    if (ret) {
++        free(private);
++        return NULL;
++    }
++
++    private->driDrawable =
++        (*driScreen->dri2->createNewDrawable) (driScreen->driScreen,
++                                               config->driConfig, private);
++
++    return &private->base;
++}
++
++static __DRIbuffer *
++dri2GetBuffers(__DRIdrawable * driDrawable,
++               int *width, int *height,
++               unsigned int *attachments, int count,
++               int *out_count, void *loaderPrivate)
++{
++    __GLXDRIdrawable *private = loaderPrivate;
++    DRI2BufferPtr *buffers;
++    int i;
++    int j;
++    __GLXcontext *cx = lastGLContext;
++
++    buffers = DRI2GetBuffers(private->base.pDraw,
++                             width, height, attachments, count, out_count);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++
++        /* If DRI2GetBuffers() changed the GL context, it may also have
++         * invalidated the DRI2 buffers, so let's get them again
++         */
++        buffers = DRI2GetBuffers(private->base.pDraw,
++                                 width, height, attachments, count, out_count);
++        assert(lastGLContext == cx);
++    }
++
++    if (*out_count > MAX_DRAWABLE_BUFFERS) {
++        *out_count = 0;
++        return NULL;
++    }
++
++    private->width = *width;
++    private->height = *height;
++
++    /* This assumes the DRI2 buffer attachment tokens matches the
++     * __DRIbuffer tokens. */
++    j = 0;
++    for (i = 0; i < *out_count; i++) {
++        /* Do not send the real front buffer of a window to the client.
++         */
++        if ((private->base.pDraw->type == DRAWABLE_WINDOW)
++            && (buffers[i]->attachment == DRI2BufferFrontLeft)) {
++            continue;
++        }
++
++        private->buffers[j].attachment = buffers[i]->attachment;
++        private->buffers[j].name = buffers[i]->name;
++        private->buffers[j].pitch = buffers[i]->pitch;
++        private->buffers[j].cpp = buffers[i]->cpp;
++        private->buffers[j].flags = buffers[i]->flags;
++        j++;
++    }
++
++    *out_count = j;
++    return private->buffers;
++}
++
++static __DRIbuffer *
++dri2GetBuffersWithFormat(__DRIdrawable * driDrawable,
++                         int *width, int *height,
++                         unsigned int *attachments, int count,
++                         int *out_count, void *loaderPrivate)
++{
++    __GLXDRIdrawable *private = loaderPrivate;
++    DRI2BufferPtr *buffers;
++    int i;
++    int j = 0;
++    __GLXcontext *cx = lastGLContext;
++
++    buffers = DRI2GetBuffersWithFormat(private->base.pDraw,
++                                       width, height, attachments, count,
++                                       out_count);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++
++        /* If DRI2GetBuffersWithFormat() changed the GL context, it may also have
++         * invalidated the DRI2 buffers, so let's get them again
++         */
++        buffers = DRI2GetBuffersWithFormat(private->base.pDraw,
++                                           width, height, attachments, count,
++                                           out_count);
++        assert(lastGLContext == cx);
++    }
++
++    if (*out_count > MAX_DRAWABLE_BUFFERS) {
++        *out_count = 0;
++        return NULL;
++    }
++
++    private->width = *width;
++    private->height = *height;
++
++    /* This assumes the DRI2 buffer attachment tokens matches the
++     * __DRIbuffer tokens. */
++    for (i = 0; i < *out_count; i++) {
++        /* Do not send the real front buffer of a window to the client.
++         */
++        if ((private->base.pDraw->type == DRAWABLE_WINDOW)
++            && (buffers[i]->attachment == DRI2BufferFrontLeft)) {
++            continue;
++        }
++
++        private->buffers[j].attachment = buffers[i]->attachment;
++        private->buffers[j].name = buffers[i]->name;
++        private->buffers[j].pitch = buffers[i]->pitch;
++        private->buffers[j].cpp = buffers[i]->cpp;
++        private->buffers[j].flags = buffers[i]->flags;
++        j++;
++    }
++
++    *out_count = j;
++    return private->buffers;
++}
++
++static void
++dri2FlushFrontBuffer(__DRIdrawable * driDrawable, void *loaderPrivate)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) loaderPrivate;
++    (void) driDrawable;
++
++    copy_box(loaderPrivate, DRI2BufferFrontLeft, DRI2BufferFakeFrontLeft,
++             0, 0, private->width, private->height);
++}
++
++static const __DRIdri2LoaderExtension loaderExtension = {
++    {__DRI_DRI2_LOADER, 3},
++    dri2GetBuffers,
++    dri2FlushFrontBuffer,
++    dri2GetBuffersWithFormat,
++};
++
++static const __DRIuseInvalidateExtension dri2UseInvalidate = {
++    {__DRI_USE_INVALIDATE, 1}
++};
++
++static const __DRIextension *loader_extensions[] = {
++    &loaderExtension.base,
++    &dri2UseInvalidate.base,
++    NULL
++};
++
++static Bool
++glxDRIEnterVT(ScrnInfoPtr scrn)
++{
++    Bool ret;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *)
++        glxGetScreen(xf86ScrnToScreen(scrn));
++
++    LogMessage(X_INFO, "AIGLX: Resuming AIGLX clients after VT switch\n");
++
++    scrn->EnterVT = screen->enterVT;
++
++    ret = scrn->EnterVT(scrn);
++
++    screen->enterVT = scrn->EnterVT;
++    scrn->EnterVT = glxDRIEnterVT;
++
++    if (!ret)
++        return FALSE;
++
++    glxResumeClients();
++
++    return TRUE;
++}
++
++static void
++glxDRILeaveVT(ScrnInfoPtr scrn)
++{
++    __GLXDRIscreen *screen = (__GLXDRIscreen *)
++        glxGetScreen(xf86ScrnToScreen(scrn));
++
++    LogMessageVerbSigSafe(X_INFO, -1, "AIGLX: Suspending AIGLX clients for VT switch\n");
++
++    glxSuspendClients();
++
++    scrn->LeaveVT = screen->leaveVT;
++    (*screen->leaveVT) (scrn);
++    screen->leaveVT = scrn->LeaveVT;
++    scrn->LeaveVT = glxDRILeaveVT;
++}
++
++/**
++ * Initialize extension flags in glx_enable_bits when a new screen is created
++ *
++ * @param screen The screen where glx_enable_bits are to be set.
++ */
++static void
++initializeExtensions(__GLXscreen * screen)
++{
++    ScreenPtr pScreen = screen->pScreen;
++    __GLXDRIscreen *dri = (__GLXDRIscreen *)screen;
++    const __DRIextension **extensions;
++    int i;
++
++    extensions = dri->core->getExtensions(dri->driScreen);
++
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_MESA_copy_sub_buffer");
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_no_config_context");
++
++    if (dri->dri2->base.version >= 3) {
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_ARB_create_context");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_ARB_create_context_no_error");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_ARB_create_context_profile");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_EXT_create_context_es_profile");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_EXT_create_context_es2_profile");
++    }
++
++    if (DRI2HasSwapControl(pScreen)) {
++        __glXEnableExtension(screen->glx_enable_bits, "GLX_INTEL_swap_event");
++        __glXEnableExtension(screen->glx_enable_bits, "GLX_SGI_swap_control");
++    }
++
++    /* enable EXT_framebuffer_sRGB extension (even if there are no sRGB capable fbconfigs) */
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_framebuffer_sRGB");
++
++    /* enable ARB_fbconfig_float extension (even if there are no float fbconfigs) */
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_ARB_fbconfig_float");
++
++    /* enable EXT_fbconfig_packed_float (even if there are no packed float fbconfigs) */
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_fbconfig_packed_float");
++
++    for (i = 0; extensions[i]; i++) {
++        if (strcmp(extensions[i]->name, __DRI_TEX_BUFFER) == 0) {
++            dri->texBuffer = (const __DRItexBufferExtension *) extensions[i];
++            __glXEnableExtension(screen->glx_enable_bits,
++                                 "GLX_EXT_texture_from_pixmap");
++        }
++
++        if (strcmp(extensions[i]->name, __DRI2_FLUSH) == 0 &&
++            extensions[i]->version >= 3) {
++            dri->flush = (__DRI2flushExtension *) extensions[i];
++        }
++
++        if (strcmp(extensions[i]->name, __DRI2_ROBUSTNESS) == 0 &&
++            dri->dri2->base.version >= 3) {
++            __glXEnableExtension(screen->glx_enable_bits,
++                                 "GLX_ARB_create_context_robustness");
++        }
++
++#ifdef __DRI2_FLUSH_CONTROL
++        if (strcmp(extensions[i]->name, __DRI2_FLUSH_CONTROL) == 0) {
++            __glXEnableExtension(screen->glx_enable_bits,
++                                 "GLX_ARB_context_flush_control");
++        }
++#endif
++
++        /* Ignore unknown extensions */
++    }
++}
++
++static void
++__glXDRIscreenDestroy(__GLXscreen * baseScreen)
++{
++    int i;
++
++    ScrnInfoPtr pScrn = xf86ScreenToScrn(baseScreen->pScreen);
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
++
++    (*screen->core->destroyScreen) (screen->driScreen);
++
++    dlclose(screen->driver);
++
++    __glXScreenDestroy(baseScreen);
++
++    if (screen->driConfigs) {
++        for (i = 0; screen->driConfigs[i] != NULL; i++)
++            free((__DRIconfig **) screen->driConfigs[i]);
++        free(screen->driConfigs);
++    }
++
++    pScrn->EnterVT = screen->enterVT;
++    pScrn->LeaveVT = screen->leaveVT;
++
++    free(screen);
++}
++
++enum {
++    GLXOPT_VENDOR_LIBRARY,
++};
++
++static const OptionInfoRec GLXOptions[] = {
++    { GLXOPT_VENDOR_LIBRARY, "GlxVendorLibrary", OPTV_STRING, {0}, FALSE },
++    { -1, NULL, OPTV_NONE, {0}, FALSE },
++};
++
++static __GLXscreen *
++__glXDRIscreenProbe(ScreenPtr pScreen)
++{
++    const char *driverName, *deviceName;
++    __GLXDRIscreen *screen;
++    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
++    const char *glvnd = NULL;
++    OptionInfoPtr options;
++
++    screen = calloc(1, sizeof *screen);
++    if (screen == NULL)
++        return NULL;
++
++    if (!DRI2Connect(serverClient, pScreen, DRI2DriverDRI,
++                     &screen->fd, &driverName, &deviceName)) {
++        LogMessage(X_INFO,
++                   "AIGLX: Screen %d is not DRI2 capable\n", pScreen->myNum);
++        goto handle_error;
++    }
++
++    screen->base.destroy = __glXDRIscreenDestroy;
++    screen->base.createContext = __glXDRIscreenCreateContext;
++    screen->base.createDrawable = __glXDRIscreenCreateDrawable;
++    screen->base.swapInterval = __glXDRIdrawableSwapInterval;
++    screen->base.pScreen = pScreen;
++
++    __glXInitExtensionEnableBits(screen->base.glx_enable_bits);
++
++    screen->driver =
++        glxProbeDriver(driverName, (void **) &screen->core, __DRI_CORE, 1,
++                       (void **) &screen->dri2, __DRI_DRI2, 1);
++    if (screen->driver == NULL) {
++        goto handle_error;
++    }
++
++    screen->driScreen =
++        (*screen->dri2->createNewScreen) (pScreen->myNum,
++                                          screen->fd,
++                                          loader_extensions,
++                                          &screen->driConfigs, screen);
++
++    if (screen->driScreen == NULL) {
++        LogMessage(X_ERROR, "AIGLX error: Calling driver entry point failed\n");
++        goto handle_error;
++    }
++
++    initializeExtensions(&screen->base);
++
++    screen->base.fbconfigs = glxConvertConfigs(screen->core,
++                                               screen->driConfigs);
++
++    options = xnfalloc(sizeof(GLXOptions));
++    memcpy(options, GLXOptions, sizeof(GLXOptions));
++    xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, options);
++    glvnd = xf86GetOptValString(options, GLXOPT_VENDOR_LIBRARY);
++    if (glvnd)
++        screen->base.glvnd = xnfstrdup(glvnd);
++    free(options);
++
++    if (!screen->base.glvnd)
++        screen->base.glvnd = strdup("mesa");
++
++    __glXScreenInit(&screen->base, pScreen);
++
++    screen->enterVT = pScrn->EnterVT;
++    pScrn->EnterVT = glxDRIEnterVT;
++    screen->leaveVT = pScrn->LeaveVT;
++    pScrn->LeaveVT = glxDRILeaveVT;
++
++    __glXsetGetProcAddress(glXGetProcAddressARB);
++
++    LogMessage(X_INFO, "AIGLX: Loaded and initialized %s\n", driverName);
++
++    return &screen->base;
++
++ handle_error:
++    if (screen->driver)
++        dlclose(screen->driver);
++
++    free(screen);
++
++    return NULL;
++}
++
++_X_EXPORT __GLXprovider __glXDRI2Provider = {
++    __glXDRIscreenProbe,
++    "DRI2",
++    NULL
++};
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glx_dri/glxdricommon.c xwayland-24.1.11/glx/glx_dri/glxdricommon.c
+--- xwayland-24.1.11.orig/glx/glx_dri/glxdricommon.c	1969-12-31 17:00:00.000000000 -0700
++++ xwayland-24.1.11/glx/glx_dri/glxdricommon.c	2026-04-27 01:25:48.000000000 -0600
+@@ -0,0 +1,394 @@
++/*
++ * Copyright © 2008 Red Hat, Inc
++ *
++ * Permission to use, copy, modify, distribute, and sell this software
++ * and its documentation for any purpose is hereby granted without
++ * fee, provided that the above copyright notice appear in all copies
++ * and that both that copyright notice and this permission notice
++ * appear in supporting documentation, and that the name of the
++ * copyright holders not be used in advertising or publicity
++ * pertaining to distribution of the software without specific,
++ * written prior permission.  The copyright holders make no
++ * representations about the suitability of this software for any
++ * purpose.  It is provided "as is" without express or implied
++ * warranty.
++ *
++ * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
++ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
++ * FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
++ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
++ * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
++ * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
++ * SOFTWARE.
++ */
++
++#ifdef HAVE_DIX_CONFIG_H
++#include <dix-config.h>
++#endif
++
++#include <ctype.h>
++#include <stdint.h>
++#include <errno.h>
++#include <dlfcn.h>
++#include <sys/time.h>
++#include <GL/gl.h>
++#include <GL/glxtokens.h>
++#include <GL/internal/dri_interface.h>
++#include <os.h>
++#include "extinit.h"
++#include "glxserver.h"
++#include "glxext.h"
++#include "glxcontext.h"
++#include "glxscreens.h"
++#include "glxdricommon.h"
++
++#define __ATTRIB(attrib, field) \
++    { attrib, offsetof(__GLXconfig, field) }
++
++static const struct {
++    unsigned int attrib, offset;
++} attribMap[] = {
++__ATTRIB(__DRI_ATTRIB_BUFFER_SIZE, rgbBits),
++        __ATTRIB(__DRI_ATTRIB_LEVEL, level),
++        __ATTRIB(__DRI_ATTRIB_RED_SIZE, redBits),
++        __ATTRIB(__DRI_ATTRIB_GREEN_SIZE, greenBits),
++        __ATTRIB(__DRI_ATTRIB_BLUE_SIZE, blueBits),
++        __ATTRIB(__DRI_ATTRIB_ALPHA_SIZE, alphaBits),
++        __ATTRIB(__DRI_ATTRIB_DEPTH_SIZE, depthBits),
++        __ATTRIB(__DRI_ATTRIB_STENCIL_SIZE, stencilBits),
++        __ATTRIB(__DRI_ATTRIB_ACCUM_RED_SIZE, accumRedBits),
++        __ATTRIB(__DRI_ATTRIB_ACCUM_GREEN_SIZE, accumGreenBits),
++        __ATTRIB(__DRI_ATTRIB_ACCUM_BLUE_SIZE, accumBlueBits),
++        __ATTRIB(__DRI_ATTRIB_ACCUM_ALPHA_SIZE, accumAlphaBits),
++        __ATTRIB(__DRI_ATTRIB_SAMPLE_BUFFERS, sampleBuffers),
++        __ATTRIB(__DRI_ATTRIB_SAMPLES, samples),
++        __ATTRIB(__DRI_ATTRIB_DOUBLE_BUFFER, doubleBufferMode),
++        __ATTRIB(__DRI_ATTRIB_STEREO, stereoMode),
++        __ATTRIB(__DRI_ATTRIB_AUX_BUFFERS, numAuxBuffers),
++        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_TYPE, transparentPixel),
++        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_INDEX_VALUE, transparentPixel),
++        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_RED_VALUE, transparentRed),
++        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_GREEN_VALUE, transparentGreen),
++        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_BLUE_VALUE, transparentBlue),
++        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_ALPHA_VALUE, transparentAlpha),
++        __ATTRIB(__DRI_ATTRIB_RED_MASK, redMask),
++        __ATTRIB(__DRI_ATTRIB_GREEN_MASK, greenMask),
++        __ATTRIB(__DRI_ATTRIB_BLUE_MASK, blueMask),
++        __ATTRIB(__DRI_ATTRIB_ALPHA_MASK, alphaMask),
++        __ATTRIB(__DRI_ATTRIB_MAX_PBUFFER_WIDTH, maxPbufferWidth),
++        __ATTRIB(__DRI_ATTRIB_MAX_PBUFFER_HEIGHT, maxPbufferHeight),
++        __ATTRIB(__DRI_ATTRIB_MAX_PBUFFER_PIXELS, maxPbufferPixels),
++        __ATTRIB(__DRI_ATTRIB_OPTIMAL_PBUFFER_WIDTH, optimalPbufferWidth),
++        __ATTRIB(__DRI_ATTRIB_OPTIMAL_PBUFFER_HEIGHT, optimalPbufferHeight),
++        __ATTRIB(__DRI_ATTRIB_SWAP_METHOD, swapMethod),
++        __ATTRIB(__DRI_ATTRIB_BIND_TO_TEXTURE_RGB, bindToTextureRgb),
++        __ATTRIB(__DRI_ATTRIB_BIND_TO_TEXTURE_RGBA, bindToTextureRgba),
++        __ATTRIB(__DRI_ATTRIB_BIND_TO_MIPMAP_TEXTURE, bindToMipmapTexture),
++        __ATTRIB(__DRI_ATTRIB_YINVERTED, yInverted),
++        __ATTRIB(__DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE, sRGBCapable),
++        };
++
++static void
++setScalar(__GLXconfig * config, unsigned int attrib, unsigned int value)
++{
++    int i;
++
++    for (i = 0; i < ARRAY_SIZE(attribMap); i++)
++        if (attribMap[i].attrib == attrib) {
++            *(unsigned int *) ((char *) config + attribMap[i].offset) = value;
++            return;
++        }
++}
++
++static Bool
++render_type_is_pbuffer_only(unsigned renderType)
++{
++    /* The GL_ARB_color_buffer_float spec says:
++     *
++     *     "Note that floating point rendering is only supported for
++     *     GLXPbuffer drawables.  The GLX_DRAWABLE_TYPE attribute of the
++     *     GLXFBConfig must have the GLX_PBUFFER_BIT bit set and the
++     *     GLX_RENDER_TYPE attribute must have the GLX_RGBA_FLOAT_BIT set."
++     */
++    return !!(renderType & (__DRI_ATTRIB_UNSIGNED_FLOAT_BIT
++                            | __DRI_ATTRIB_FLOAT_BIT));
++}
++
++static int
++server_has_depth(int depth)
++{
++    int i;
++    for (i = 0; i < screenInfo.numPixmapFormats; i++)
++        if (screenInfo.formats[i].depth == depth)
++            return 1;
++    return 0;
++}
++
++static __GLXconfig *
++createModeFromConfig(const __DRIcoreExtension * core,
++                     const __DRIconfig * driConfig,
++                     unsigned int visualType,
++                     GLboolean duplicateForComp)
++{
++    __GLXDRIconfig *config;
++    GLint renderType = 0;
++    unsigned int attrib, value, drawableType = GLX_PBUFFER_BIT;
++    int i;
++
++
++    config = calloc(1, sizeof *config);
++
++    config->driConfig = driConfig;
++
++    i = 0;
++    while (core->indexConfigAttrib(driConfig, i++, &attrib, &value)) {
++        switch (attrib) {
++        case __DRI_ATTRIB_RENDER_TYPE:
++            if (value & __DRI_ATTRIB_RGBA_BIT)
++                renderType |= GLX_RGBA_BIT;
++            if (value & __DRI_ATTRIB_COLOR_INDEX_BIT)
++                renderType |= GLX_COLOR_INDEX_BIT;
++            if (value & __DRI_ATTRIB_FLOAT_BIT)
++                renderType |= GLX_RGBA_FLOAT_BIT_ARB;
++            if (value & __DRI_ATTRIB_UNSIGNED_FLOAT_BIT)
++                renderType |= GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT;
++            break;
++        case __DRI_ATTRIB_CONFIG_CAVEAT:
++            if (value & __DRI_ATTRIB_NON_CONFORMANT_CONFIG)
++                config->config.visualRating = GLX_NON_CONFORMANT_CONFIG;
++            else if (value & __DRI_ATTRIB_SLOW_BIT)
++                config->config.visualRating = GLX_SLOW_CONFIG;
++            else
++                config->config.visualRating = GLX_NONE;
++            break;
++        case __DRI_ATTRIB_BIND_TO_TEXTURE_TARGETS:
++            config->config.bindToTextureTargets = 0;
++            if (value & __DRI_ATTRIB_TEXTURE_1D_BIT)
++                config->config.bindToTextureTargets |= GLX_TEXTURE_1D_BIT_EXT;
++            if (value & __DRI_ATTRIB_TEXTURE_2D_BIT)
++                config->config.bindToTextureTargets |= GLX_TEXTURE_2D_BIT_EXT;
++            if (value & __DRI_ATTRIB_TEXTURE_RECTANGLE_BIT)
++                config->config.bindToTextureTargets |=
++                    GLX_TEXTURE_RECTANGLE_BIT_EXT;
++            break;
++        case __DRI_ATTRIB_SWAP_METHOD:
++            /* Workaround for broken dri drivers */
++            if (value != GLX_SWAP_UNDEFINED_OML &&
++                value != GLX_SWAP_COPY_OML &&
++                value != GLX_SWAP_EXCHANGE_OML)
++                value = GLX_SWAP_UNDEFINED_OML;
++            /* Fall through. */
++        default:
++            setScalar(&config->config, attrib, value);
++            break;
++        }
++    }
++
++    if (!render_type_is_pbuffer_only(renderType))
++        drawableType |= GLX_WINDOW_BIT | GLX_PIXMAP_BIT;
++
++    /* Make sure we don't advertise things the server isn't configured for */
++    if ((drawableType & (GLX_PBUFFER_BIT | GLX_PIXMAP_BIT)) &&
++        !server_has_depth(config->config.rgbBits)) {
++        drawableType &= ~(GLX_PBUFFER_BIT | GLX_PIXMAP_BIT);
++        if (!drawableType) {
++            free(config);
++            return NULL;
++        }
++    }
++
++    config->config.next = NULL;
++    config->config.visualType = visualType;
++    config->config.renderType = renderType;
++    config->config.drawableType = drawableType;
++    config->config.yInverted = GL_TRUE;
++
++#ifdef COMPOSITE
++    if (!noCompositeExtension) {
++        /*
++        * Here we decide what fbconfigs will be duplicated for compositing.
++        * fgbconfigs marked with duplicatedForConf will be reserved for
++        * compositing visuals.
++        * It might look strange to do this decision this late when translation
++        * from a __DRIConfig is already done, but using the __DRIConfig
++        * accessor function becomes worse both with respect to code complexity
++        * and CPU usage.
++        */
++        if (duplicateForComp &&
++            (render_type_is_pbuffer_only(renderType) ||
++            config->config.rgbBits != 32 ||
++            config->config.redBits != 8 ||
++            config->config.greenBits != 8 ||
++            config->config.blueBits != 8 ||
++            config->config.visualRating != GLX_NONE ||
++            config->config.sampleBuffers != 0)) {
++            free(config);
++            return NULL;
++        }
++
++        config->config.duplicatedForComp = duplicateForComp;
++    }
++#endif
++
++    return &config->config;
++}
++
++__GLXconfig *
++glxConvertConfigs(const __DRIcoreExtension * core,
++                  const __DRIconfig ** configs)
++{
++    __GLXconfig head, *tail;
++    int i;
++
++    tail = &head;
++    head.next = NULL;
++
++    for (i = 0; configs[i]; i++) {
++        tail->next = createModeFromConfig(core, configs[i], GLX_TRUE_COLOR,
++                                          GL_FALSE);
++        if (tail->next == NULL)
++            break;
++        tail = tail->next;
++    }
++
++    for (i = 0; configs[i]; i++) {
++        tail->next = createModeFromConfig(core, configs[i], GLX_DIRECT_COLOR,
++                                          GL_FALSE);
++        if (tail->next == NULL)
++            break;
++
++        tail = tail->next;
++    }
++
++#ifdef COMPOSITE
++    if (!noCompositeExtension) {
++        /* Duplicate fbconfigs for use with compositing visuals */
++        for (i = 0; configs[i]; i++) {
++            tail->next = createModeFromConfig(core, configs[i], GLX_TRUE_COLOR,
++                                            GL_TRUE);
++            if (tail->next == NULL)
++                continue;
++
++            tail = tail->next;
++        }
++    }
++#endif
++
++    return head.next;
++}
++
++static const char dri_driver_path[] = DRI_DRIVER_PATH;
++
++/* Temporary define to allow building without a dri_interface.h from
++ * updated Mesa.  Some day when we don't care about Mesa that old any
++ * more this can be removed.
++ */
++#ifndef __DRI_DRIVER_GET_EXTENSIONS
++#define __DRI_DRIVER_GET_EXTENSIONS "__driDriverGetExtensions"
++#endif
++
++void *
++glxProbeDriver(const char *driverName,
++               void **coreExt, const char *coreName, int coreVersion,
++               void **renderExt, const char *renderName, int renderVersion)
++{
++    int i;
++    void *driver;
++    char filename[PATH_MAX];
++    char *get_extensions_name;
++    const __DRIextension **extensions = NULL;
++    const char *path = NULL;
++
++    /* Search in LIBGL_DRIVERS_PATH if we're not setuid. */
++    if (!PrivsElevated())
++        path = getenv("LIBGL_DRIVERS_PATH");
++
++    if (!path)
++        path = dri_driver_path;
++
++    do {
++        const char *next;
++        int path_len;
++
++        next = strchr(path, ':');
++        if (next) {
++            path_len = next - path;
++            next++;
++        } else {
++            path_len = strlen(path);
++            next = NULL;
++        }
++
++        snprintf(filename, sizeof filename, "%.*s/%s_dri.so", path_len, path,
++                 driverName);
++
++        driver = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
++        if (driver != NULL)
++            break;
++
++        LogMessage(X_ERROR, "AIGLX error: dlopen of %s failed (%s)\n",
++                   filename, dlerror());
++
++        path = next;
++    } while (path);
++
++    if (driver == NULL) {
++        LogMessage(X_ERROR, "AIGLX error: unable to load driver %s\n",
++                  driverName);
++        goto cleanup_failure;
++    }
++
++    if (asprintf(&get_extensions_name, "%s_%s",
++                 __DRI_DRIVER_GET_EXTENSIONS, driverName) != -1) {
++        const __DRIextension **(*get_extensions)(void);
++
++        for (i = 0; i < strlen(get_extensions_name); i++) {
++            /* Replace all non-alphanumeric characters with underscore,
++             * since they are not allowed in C symbol names. That fixes up
++             * symbol name for drivers with '-drm' suffix
++             */
++            if (!isalnum(get_extensions_name[i]))
++                get_extensions_name[i] = '_';
++        }
++
++        get_extensions = dlsym(driver, get_extensions_name);
++        if (get_extensions)
++            extensions = get_extensions();
++        free(get_extensions_name);
++    }
++
++    if (!extensions)
++        extensions = dlsym(driver, __DRI_DRIVER_EXTENSIONS);
++    if (extensions == NULL) {
++        LogMessage(X_ERROR, "AIGLX error: %s exports no extensions (%s)\n",
++                   driverName, dlerror());
++        goto cleanup_failure;
++    }
++
++    for (i = 0; extensions[i]; i++) {
++        if (strcmp(extensions[i]->name, coreName) == 0 &&
++            extensions[i]->version >= coreVersion) {
++            *coreExt = (void *) extensions[i];
++        }
++
++        if (strcmp(extensions[i]->name, renderName) == 0 &&
++            extensions[i]->version >= renderVersion) {
++            *renderExt = (void *) extensions[i];
++        }
++    }
++
++    if (*coreExt == NULL || *renderExt == NULL) {
++        LogMessage(X_ERROR,
++                   "AIGLX error: %s does not export required DRI extension\n",
++                   driverName);
++        goto cleanup_failure;
++    }
++    return driver;
++
++ cleanup_failure:
++    if (driver)
++        dlclose(driver);
++    *coreExt = *renderExt = NULL;
++    return NULL;
++}
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glx_dri/glxdricommon.h xwayland-24.1.11/glx/glx_dri/glxdricommon.h
+--- xwayland-24.1.11.orig/glx/glx_dri/glxdricommon.h	1969-12-31 17:00:00.000000000 -0700
++++ xwayland-24.1.11/glx/glx_dri/glxdricommon.h	2026-04-27 01:25:48.000000000 -0600
+@@ -0,0 +1,43 @@
++/*
++ * Copyright © 2008 Red Hat, Inc
++ *
++ * Permission to use, copy, modify, distribute, and sell this software
++ * and its documentation for any purpose is hereby granted without
++ * fee, provided that the above copyright notice appear in all copies
++ * and that both that copyright notice and this permission notice
++ * appear in supporting documentation, and that the name of the
++ * copyright holders not be used in advertising or publicity
++ * pertaining to distribution of the software without specific,
++ * written prior permission.  The copyright holders make no
++ * representations about the suitability of this software for any
++ * purpose.  It is provided "as is" without express or implied
++ * warranty.
++ *
++ * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
++ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
++ * FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
++ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
++ * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
++ * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
++ * SOFTWARE.
++ */
++
++#ifndef _GLX_dri_common_h
++#define _GLX_dri_common_h
++
++typedef struct __GLXDRIconfig __GLXDRIconfig;
++struct __GLXDRIconfig {
++    __GLXconfig config;
++    const __DRIconfig *driConfig;
++};
++
++__GLXconfig *glxConvertConfigs(const __DRIcoreExtension * core,
++                               const __DRIconfig ** configs);
++
++void *glxProbeDriver(const char *name,
++                     void **coreExt, const char *coreName, int coreVersion,
++                     void **renderExt, const char *renderName,
++                     int renderVersion);
++
++#endif
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glx_dri/glxdriswrast.c xwayland-24.1.11/glx/glx_dri/glxdriswrast.c
+--- xwayland-24.1.11.orig/glx/glx_dri/glxdriswrast.c	1969-12-31 17:00:00.000000000 -0700
++++ xwayland-24.1.11/glx/glx_dri/glxdriswrast.c	2026-04-27 01:25:48.000000000 -0600
+@@ -0,0 +1,488 @@
++/*
++ * Copyright © 2008 George Sapountzis <gsap7@yahoo.gr>
++ * Copyright © 2008 Red Hat, Inc
++ *
++ * Permission to use, copy, modify, distribute, and sell this software
++ * and its documentation for any purpose is hereby granted without
++ * fee, provided that the above copyright notice appear in all copies
++ * and that both that copyright notice and this permission notice
++ * appear in supporting documentation, and that the name of the
++ * copyright holders not be used in advertising or publicity
++ * pertaining to distribution of the software without specific,
++ * written prior permission.  The copyright holders make no
++ * representations about the suitability of this software for any
++ * purpose.  It is provided "as is" without express or implied
++ * warranty.
++ *
++ * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
++ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
++ * FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
++ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
++ * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
++ * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
++ * SOFTWARE.
++ */
++
++#ifdef HAVE_DIX_CONFIG_H
++#include <dix-config.h>
++#endif
++
++#include <stdint.h>
++#include <stdio.h>
++#include <string.h>
++#include <errno.h>
++#include <sys/time.h>
++#include <dlfcn.h>
++
++#include <GL/gl.h>
++#include <GL/internal/dri_interface.h>
++#include <GL/glxtokens.h>
++
++#include "scrnintstr.h"
++#include "pixmapstr.h"
++#include "gcstruct.h"
++#include "os.h"
++
++#include "glxserver.h"
++#include "glxutil.h"
++#include "glxdricommon.h"
++
++#include "extension_string.h"
++
++/* RTLD_LOCAL is not defined on Cygwin */
++#ifdef __CYGWIN__
++#ifndef RTLD_LOCAL
++#define RTLD_LOCAL 0
++#endif
++#endif
++
++typedef struct __GLXDRIscreen __GLXDRIscreen;
++typedef struct __GLXDRIcontext __GLXDRIcontext;
++typedef struct __GLXDRIdrawable __GLXDRIdrawable;
++
++struct __GLXDRIscreen {
++    __GLXscreen base;
++    __DRIscreen *driScreen;
++    void *driver;
++
++    const __DRIcoreExtension *core;
++    const __DRIswrastExtension *swrast;
++    const __DRIcopySubBufferExtension *copySubBuffer;
++    const __DRItexBufferExtension *texBuffer;
++    const __DRIconfig **driConfigs;
++};
++
++struct __GLXDRIcontext {
++    __GLXcontext base;
++    __DRIcontext *driContext;
++};
++
++struct __GLXDRIdrawable {
++    __GLXdrawable base;
++    __DRIdrawable *driDrawable;
++    __GLXDRIscreen *screen;
++};
++
++/* white lie */
++extern glx_func_ptr glXGetProcAddressARB(const char *);
++
++static void
++__glXDRIdrawableDestroy(__GLXdrawable * drawable)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
++    const __DRIcoreExtension *core = private->screen->core;
++
++    (*core->destroyDrawable) (private->driDrawable);
++
++    __glXDrawableRelease(drawable);
++
++    free(private);
++}
++
++static GLboolean
++__glXDRIdrawableSwapBuffers(ClientPtr client, __GLXdrawable * drawable)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
++    const __DRIcoreExtension *core = private->screen->core;
++
++    (*core->swapBuffers) (private->driDrawable);
++
++    return TRUE;
++}
++
++static void
++__glXDRIdrawableCopySubBuffer(__GLXdrawable * basePrivate,
++                              int x, int y, int w, int h)
++{
++    __GLXDRIdrawable *private = (__GLXDRIdrawable *) basePrivate;
++    const __DRIcopySubBufferExtension *copySubBuffer =
++        private->screen->copySubBuffer;
++
++    if (copySubBuffer)
++        (*copySubBuffer->copySubBuffer) (private->driDrawable, x, y, w, h);
++}
++
++static void
++__glXDRIcontextDestroy(__GLXcontext * baseContext)
++{
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
++
++    (*screen->core->destroyContext) (context->driContext);
++    __glXContextDestroy(&context->base);
++    free(context);
++}
++
++static int
++__glXDRIcontextMakeCurrent(__GLXcontext * baseContext)
++{
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++    __GLXDRIdrawable *draw = (__GLXDRIdrawable *) baseContext->drawPriv;
++    __GLXDRIdrawable *read = (__GLXDRIdrawable *) baseContext->readPriv;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
++
++    return (*screen->core->bindContext) (context->driContext,
++                                         draw->driDrawable, read->driDrawable);
++}
++
++static int
++__glXDRIcontextLoseCurrent(__GLXcontext * baseContext)
++{
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
++
++    return (*screen->core->unbindContext) (context->driContext);
++}
++
++static int
++__glXDRIcontextCopy(__GLXcontext * baseDst, __GLXcontext * baseSrc,
++                    unsigned long mask)
++{
++    __GLXDRIcontext *dst = (__GLXDRIcontext *) baseDst;
++    __GLXDRIcontext *src = (__GLXDRIcontext *) baseSrc;
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) dst->base.pGlxScreen;
++
++    return (*screen->core->copyContext) (dst->driContext,
++                                         src->driContext, mask);
++}
++
++static int
++__glXDRIbindTexImage(__GLXcontext * baseContext,
++                     int buffer, __GLXdrawable * glxPixmap)
++{
++    __GLXDRIdrawable *drawable = (__GLXDRIdrawable *) glxPixmap;
++    const __DRItexBufferExtension *texBuffer = drawable->screen->texBuffer;
++    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
++
++    if (texBuffer == NULL)
++        return Success;
++
++#if __DRI_TEX_BUFFER_VERSION >= 2
++    if (texBuffer->base.version >= 2 && texBuffer->setTexBuffer2 != NULL) {
++        (*texBuffer->setTexBuffer2) (context->driContext,
++                                     glxPixmap->target,
++                                     glxPixmap->format, drawable->driDrawable);
++    }
++    else
++#endif
++        texBuffer->setTexBuffer(context->driContext,
++                                glxPixmap->target, drawable->driDrawable);
++
++    return Success;
++}
++
++static int
++__glXDRIreleaseTexImage(__GLXcontext * baseContext,
++                        int buffer, __GLXdrawable * pixmap)
++{
++    /* FIXME: Just unbind the texture? */
++    return Success;
++}
++
++static __GLXcontext *
++__glXDRIscreenCreateContext(__GLXscreen * baseScreen,
++                            __GLXconfig * glxConfig,
++                            __GLXcontext * baseShareContext,
++                            unsigned num_attribs,
++                            const uint32_t *attribs,
++                            int *error)
++{
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
++    __GLXDRIcontext *context, *shareContext;
++    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
++    const __DRIconfig *driConfig = config ? config->driConfig : NULL;
++    const __DRIcoreExtension *core = screen->core;
++    __DRIcontext *driShare;
++
++    /* DRISWRAST won't support createContextAttribs, so these parameters will
++     * never be used.
++     */
++    (void) num_attribs;
++    (void) attribs;
++    (void) error;
++
++    shareContext = (__GLXDRIcontext *) baseShareContext;
++    if (shareContext)
++        driShare = shareContext->driContext;
++    else
++        driShare = NULL;
++
++    context = calloc(1, sizeof *context);
++    if (context == NULL)
++        return NULL;
++
++    context->base.config = glxConfig;
++    context->base.destroy = __glXDRIcontextDestroy;
++    context->base.makeCurrent = __glXDRIcontextMakeCurrent;
++    context->base.loseCurrent = __glXDRIcontextLoseCurrent;
++    context->base.copy = __glXDRIcontextCopy;
++    context->base.bindTexImage = __glXDRIbindTexImage;
++    context->base.releaseTexImage = __glXDRIreleaseTexImage;
++
++    context->driContext =
++        (*core->createNewContext) (screen->driScreen, driConfig, driShare,
++                                   context);
++
++    return &context->base;
++}
++
++static __GLXdrawable *
++__glXDRIscreenCreateDrawable(ClientPtr client,
++                             __GLXscreen * screen,
++                             DrawablePtr pDraw,
++                             XID drawId,
++                             int type, XID glxDrawId, __GLXconfig * glxConfig)
++{
++    __GLXDRIscreen *driScreen = (__GLXDRIscreen *) screen;
++    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
++    __GLXDRIdrawable *private;
++
++    private = calloc(1, sizeof *private);
++    if (private == NULL)
++        return NULL;
++
++    private->screen = driScreen;
++    if (!__glXDrawableInit(&private->base, screen,
++                           pDraw, type, glxDrawId, glxConfig)) {
++        free(private);
++        return NULL;
++    }
++
++    private->base.destroy = __glXDRIdrawableDestroy;
++    private->base.swapBuffers = __glXDRIdrawableSwapBuffers;
++    private->base.copySubBuffer = __glXDRIdrawableCopySubBuffer;
++
++    private->driDrawable =
++        (*driScreen->swrast->createNewDrawable) (driScreen->driScreen,
++                                                 config->driConfig, private);
++
++    return &private->base;
++}
++
++static void
++swrastGetDrawableInfo(__DRIdrawable * draw,
++                      int *x, int *y, int *w, int *h, void *loaderPrivate)
++{
++    __GLXDRIdrawable *drawable = loaderPrivate;
++    DrawablePtr pDraw = drawable->base.pDraw;
++
++    *x = pDraw->x;
++    *y = pDraw->y;
++    *w = pDraw->width;
++    *h = pDraw->height;
++}
++
++static void
++swrastPutImage(__DRIdrawable * draw, int op,
++               int x, int y, int w, int h, char *data, void *loaderPrivate)
++{
++    __GLXDRIdrawable *drawable = loaderPrivate;
++    DrawablePtr pDraw = drawable->base.pDraw;
++    GCPtr gc;
++    __GLXcontext *cx = lastGLContext;
++
++    if ((gc = GetScratchGC(pDraw->depth, pDraw->pScreen))) {
++        ValidateGC(pDraw, gc);
++        gc->ops->PutImage(pDraw, gc, pDraw->depth, x, y, w, h, 0, ZPixmap,
++                          data);
++        FreeScratchGC(gc);
++    }
++
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++}
++
++static void
++swrastGetImage(__DRIdrawable * draw,
++               int x, int y, int w, int h, char *data, void *loaderPrivate)
++{
++    __GLXDRIdrawable *drawable = loaderPrivate;
++    DrawablePtr pDraw = drawable->base.pDraw;
++    ScreenPtr pScreen = pDraw->pScreen;
++    __GLXcontext *cx = lastGLContext;
++
++    pScreen->SourceValidate(pDraw, x, y, w, h, IncludeInferiors);
++    pScreen->GetImage(pDraw, x, y, w, h, ZPixmap, ~0L, data);
++    if (cx != lastGLContext) {
++        lastGLContext = cx;
++        cx->makeCurrent(cx);
++    }
++}
++
++static const __DRIswrastLoaderExtension swrastLoaderExtension = {
++    {__DRI_SWRAST_LOADER, 1},
++    swrastGetDrawableInfo,
++    swrastPutImage,
++    swrastGetImage
++};
++
++static const __DRIextension *loader_extensions[] = {
++    &swrastLoaderExtension.base,
++    NULL
++};
++
++static void
++initializeExtensions(__GLXscreen * screen)
++{
++    const __DRIextension **extensions;
++    __GLXDRIscreen *dri = (__GLXDRIscreen *)screen;
++    int i;
++
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_MESA_copy_sub_buffer");
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_no_config_context");
++
++    if (dri->swrast->base.version >= 3) {
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_ARB_create_context");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_ARB_create_context_no_error");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_ARB_create_context_profile");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_EXT_create_context_es_profile");
++        __glXEnableExtension(screen->glx_enable_bits,
++                             "GLX_EXT_create_context_es2_profile");
++    }
++
++    /* these are harmless to enable unconditionally */
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_framebuffer_sRGB");
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_ARB_fbconfig_float");
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_fbconfig_packed_float");
++    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_texture_from_pixmap");
++
++    extensions = dri->core->getExtensions(dri->driScreen);
++
++    for (i = 0; extensions[i]; i++) {
++        if (strcmp(extensions[i]->name, __DRI_COPY_SUB_BUFFER) == 0) {
++            dri->copySubBuffer =
++                (const __DRIcopySubBufferExtension *) extensions[i];
++        }
++
++        if (strcmp(extensions[i]->name, __DRI_TEX_BUFFER) == 0) {
++            dri->texBuffer = (const __DRItexBufferExtension *) extensions[i];
++        }
++
++#ifdef __DRI2_FLUSH_CONTROL
++        if (strcmp(extensions[i]->name, __DRI2_FLUSH_CONTROL) == 0) {
++            __glXEnableExtension(screen->glx_enable_bits,
++                                 "GLX_ARB_context_flush_control");
++        }
++#endif
++
++    }
++}
++
++static void
++__glXDRIscreenDestroy(__GLXscreen * baseScreen)
++{
++    int i;
++
++    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
++
++    (*screen->core->destroyScreen) (screen->driScreen);
++
++    dlclose(screen->driver);
++
++    __glXScreenDestroy(baseScreen);
++
++    if (screen->driConfigs) {
++        for (i = 0; screen->driConfigs[i] != NULL; i++)
++            free((__DRIconfig **) screen->driConfigs[i]);
++        free(screen->driConfigs);
++    }
++
++    free(screen);
++}
++
++static __GLXscreen *
++__glXDRIscreenProbe(ScreenPtr pScreen)
++{
++    const char *driverName = "swrast";
++    __GLXDRIscreen *screen;
++
++    screen = calloc(1, sizeof *screen);
++    if (screen == NULL)
++        return NULL;
++
++    screen->base.destroy = __glXDRIscreenDestroy;
++    screen->base.createContext = __glXDRIscreenCreateContext;
++    screen->base.createDrawable = __glXDRIscreenCreateDrawable;
++    screen->base.swapInterval = NULL;
++    screen->base.pScreen = pScreen;
++
++    __glXInitExtensionEnableBits(screen->base.glx_enable_bits);
++
++    screen->driver = glxProbeDriver(driverName,
++                                    (void **) &screen->core,
++                                    __DRI_CORE, 1,
++                                    (void **) &screen->swrast,
++                                    __DRI_SWRAST, 1);
++    if (screen->driver == NULL) {
++        goto handle_error;
++    }
++
++    screen->driScreen =
++        (*screen->swrast->createNewScreen) (pScreen->myNum,
++                                            loader_extensions,
++                                            &screen->driConfigs, screen);
++
++    if (screen->driScreen == NULL) {
++        LogMessage(X_ERROR, "IGLX error: Calling driver entry point failed\n");
++        goto handle_error;
++    }
++
++    initializeExtensions(&screen->base);
++
++    screen->base.fbconfigs = glxConvertConfigs(screen->core,
++                                               screen->driConfigs);
++
++#if !defined(XQUARTZ) && !defined(WIN32)
++    screen->base.glvnd = strdup("mesa");
++#endif
++    __glXScreenInit(&screen->base, pScreen);
++
++    __glXsetGetProcAddress(glXGetProcAddressARB);
++
++    LogMessage(X_INFO, "IGLX: Loaded and initialized %s\n", driverName);
++
++    return &screen->base;
++
++ handle_error:
++    if (screen->driver)
++        dlclose(screen->driver);
++
++    free(screen);
++
++    LogMessage(X_ERROR, "GLX: could not load software renderer\n");
++
++    return NULL;
++}
++
++__GLXprovider __glXDRISWRastProvider = {
++    __glXDRIscreenProbe,
++    "DRISWRAST",
++    NULL
++};
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glxdri2.c xwayland-24.1.11/glx/glxdri2.c
+--- xwayland-24.1.11.orig/glx/glxdri2.c	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/glx/glxdri2.c	1969-12-31 17:00:00.000000000 -0700
+@@ -1,1017 +0,0 @@
+-/*
+- * Copyright © 2007 Red Hat, Inc
+- *
+- * Permission to use, copy, modify, distribute, and sell this software
+- * and its documentation for any purpose is hereby granted without
+- * fee, provided that the above copyright notice appear in all copies
+- * and that both that copyright notice and this permission notice
+- * appear in supporting documentation, and that the name of Red Hat,
+- * Inc not be used in advertising or publicity pertaining to
+- * distribution of the software without specific, written prior
+- * permission.  Red Hat, Inc makes no representations about the
+- * suitability of this software for any purpose.  It is provided "as
+- * is" without express or implied warranty.
+- *
+- * RED HAT, INC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+- * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN
+- * NO EVENT SHALL RED HAT, INC BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+- * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+- * OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+- */
+-
+-#ifdef HAVE_DIX_CONFIG_H
+-#include <dix-config.h>
+-#endif
+-
+-#include <stdint.h>
+-#include <stdio.h>
+-#include <string.h>
+-#include <errno.h>
+-#include <dlfcn.h>
+-
+-#include <GL/gl.h>
+-#include <GL/internal/dri_interface.h>
+-#include <GL/glxtokens.h>
+-
+-#include <windowstr.h>
+-#include <os.h>
+-
+-#define _XF86DRI_SERVER_
+-#include <xf86.h>
+-#include <dri2.h>
+-
+-#include <GL/glxtokens.h>
+-#include "glxserver.h"
+-#include "glxutil.h"
+-#include "glxdricommon.h"
+-
+-#include "extension_string.h"
+-
+-typedef struct __GLXDRIscreen __GLXDRIscreen;
+-typedef struct __GLXDRIcontext __GLXDRIcontext;
+-typedef struct __GLXDRIdrawable __GLXDRIdrawable;
+-
+-#define ALL_DRI_CTX_FLAGS (__DRI_CTX_FLAG_DEBUG                         \
+-                           | __DRI_CTX_FLAG_FORWARD_COMPATIBLE          \
+-                           | __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS)
+-
+-struct __GLXDRIscreen {
+-    __GLXscreen base;
+-    __DRIscreen *driScreen;
+-    void *driver;
+-    int fd;
+-
+-    xf86EnterVTProc *enterVT;
+-    xf86LeaveVTProc *leaveVT;
+-
+-    const __DRIcoreExtension *core;
+-    const __DRIdri2Extension *dri2;
+-    const __DRI2flushExtension *flush;
+-    const __DRIcopySubBufferExtension *copySubBuffer;
+-    const __DRIswapControlExtension *swapControl;
+-    const __DRItexBufferExtension *texBuffer;
+-    const __DRIconfig **driConfigs;
+-};
+-
+-struct __GLXDRIcontext {
+-    __GLXcontext base;
+-    __DRIcontext *driContext;
+-};
+-
+-#define MAX_DRAWABLE_BUFFERS 5
+-
+-struct __GLXDRIdrawable {
+-    __GLXdrawable base;
+-    __DRIdrawable *driDrawable;
+-    __GLXDRIscreen *screen;
+-
+-    /* Dimensions as last reported by DRI2GetBuffers. */
+-    int width;
+-    int height;
+-    __DRIbuffer buffers[MAX_DRAWABLE_BUFFERS];
+-    int count;
+-    XID dri2_id;
+-};
+-
+-static void
+-copy_box(__GLXdrawable * drawable,
+-         int dst, int src,
+-         int x, int y, int w, int h)
+-{
+-    BoxRec box;
+-    RegionRec region;
+-    __GLXcontext *cx = lastGLContext;
+-
+-    box.x1 = x;
+-    box.y1 = y;
+-    box.x2 = x + w;
+-    box.y2 = y + h;
+-    RegionInit(&region, &box, 0);
+-
+-    DRI2CopyRegion(drawable->pDraw, &region, dst, src);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-}
+-
+-/* white lie */
+-extern glx_func_ptr glXGetProcAddressARB(const char *);
+-
+-static void
+-__glXDRIdrawableDestroy(__GLXdrawable * drawable)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
+-    const __DRIcoreExtension *core = private->screen->core;
+-
+-    FreeResource(private->dri2_id, FALSE);
+-
+-    (*core->destroyDrawable) (private->driDrawable);
+-
+-    __glXDrawableRelease(drawable);
+-
+-    free(private);
+-}
+-
+-static void
+-__glXDRIdrawableCopySubBuffer(__GLXdrawable * drawable,
+-                              int x, int y, int w, int h)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
+-
+-    copy_box(drawable, x, private->height - y - h,
+-             w, h,
+-             DRI2BufferFrontLeft, DRI2BufferBackLeft);
+-}
+-
+-static void
+-__glXDRIdrawableWaitX(__GLXdrawable * drawable)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
+-
+-    copy_box(drawable, DRI2BufferFakeFrontLeft, DRI2BufferFrontLeft,
+-             0, 0, private->width, private->height);
+-}
+-
+-static void
+-__glXDRIdrawableWaitGL(__GLXdrawable * drawable)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
+-
+-    copy_box(drawable, DRI2BufferFrontLeft, DRI2BufferFakeFrontLeft,
+-             0, 0, private->width, private->height);
+-}
+-
+-static void
+-__glXdriSwapEvent(ClientPtr client, void *data, int type, CARD64 ust,
+-                  CARD64 msc, CARD32 sbc)
+-{
+-    __GLXdrawable *drawable = data;
+-    int glx_type;
+-    switch (type) {
+-    case DRI2_EXCHANGE_COMPLETE:
+-        glx_type = GLX_EXCHANGE_COMPLETE_INTEL;
+-        break;
+-    default:
+-        /* unknown swap completion type,
+-         * BLIT is a reasonable default, so
+-         * fall through ...
+-         */
+-    case DRI2_BLIT_COMPLETE:
+-        glx_type = GLX_BLIT_COMPLETE_INTEL;
+-        break;
+-    case DRI2_FLIP_COMPLETE:
+-        glx_type = GLX_FLIP_COMPLETE_INTEL;
+-        break;
+-    }
+-
+-    __glXsendSwapEvent(drawable, glx_type, ust, msc, sbc);
+-}
+-
+-/*
+- * Copy or flip back to front, honoring the swap interval if possible.
+- *
+- * If the kernel supports it, we request an event for the frame when the
+- * swap should happen, then perform the copy when we receive it.
+- */
+-static GLboolean
+-__glXDRIdrawableSwapBuffers(ClientPtr client, __GLXdrawable * drawable)
+-{
+-    __GLXDRIdrawable *priv = (__GLXDRIdrawable *) drawable;
+-    __GLXDRIscreen *screen = priv->screen;
+-    CARD64 unused;
+-    __GLXcontext *cx = lastGLContext;
+-    int status;
+-
+-    if (screen->flush) {
+-        (*screen->flush->flush) (priv->driDrawable);
+-        (*screen->flush->invalidate) (priv->driDrawable);
+-    }
+-
+-    status = DRI2SwapBuffers(client, drawable->pDraw, 0, 0, 0, &unused,
+-                             __glXdriSwapEvent, drawable);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-
+-    return status == Success;
+-}
+-
+-static int
+-__glXDRIdrawableSwapInterval(__GLXdrawable * drawable, int interval)
+-{
+-    __GLXcontext *cx = lastGLContext;
+-
+-    if (interval <= 0)          /* || interval > BIGNUM? */
+-        return GLX_BAD_VALUE;
+-
+-    DRI2SwapInterval(drawable->pDraw, interval);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-
+-    return 0;
+-}
+-
+-static void
+-__glXDRIcontextDestroy(__GLXcontext * baseContext)
+-{
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
+-
+-    (*screen->core->destroyContext) (context->driContext);
+-    __glXContextDestroy(&context->base);
+-    free(context);
+-}
+-
+-static int
+-__glXDRIcontextMakeCurrent(__GLXcontext * baseContext)
+-{
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-    __GLXDRIdrawable *draw = (__GLXDRIdrawable *) baseContext->drawPriv;
+-    __GLXDRIdrawable *read = (__GLXDRIdrawable *) baseContext->readPriv;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
+-
+-    return (*screen->core->bindContext) (context->driContext,
+-                                         draw->driDrawable, read->driDrawable);
+-}
+-
+-static int
+-__glXDRIcontextLoseCurrent(__GLXcontext * baseContext)
+-{
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
+-
+-    return (*screen->core->unbindContext) (context->driContext);
+-}
+-
+-static int
+-__glXDRIcontextCopy(__GLXcontext * baseDst, __GLXcontext * baseSrc,
+-                    unsigned long mask)
+-{
+-    __GLXDRIcontext *dst = (__GLXDRIcontext *) baseDst;
+-    __GLXDRIcontext *src = (__GLXDRIcontext *) baseSrc;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) dst->base.pGlxScreen;
+-
+-    return (*screen->core->copyContext) (dst->driContext,
+-                                         src->driContext, mask);
+-}
+-
+-static Bool
+-__glXDRIcontextWait(__GLXcontext * baseContext,
+-                    __GLXclientState * cl, int *error)
+-{
+-    __GLXcontext *cx = lastGLContext;
+-    Bool ret;
+-
+-    ret = DRI2WaitSwap(cl->client, baseContext->drawPriv->pDraw);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-
+-    if (ret) {
+-        *error = cl->client->noClientException;
+-        return TRUE;
+-    }
+-
+-    return FALSE;
+-}
+-
+-static int
+-__glXDRIbindTexImage(__GLXcontext * baseContext,
+-                     int buffer, __GLXdrawable * glxPixmap)
+-{
+-    __GLXDRIdrawable *drawable = (__GLXDRIdrawable *) glxPixmap;
+-    const __DRItexBufferExtension *texBuffer = drawable->screen->texBuffer;
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-
+-    if (texBuffer == NULL)
+-        return Success;
+-
+-    if (texBuffer->base.version >= 2 && texBuffer->setTexBuffer2 != NULL) {
+-        (*texBuffer->setTexBuffer2) (context->driContext,
+-                                     glxPixmap->target,
+-                                     glxPixmap->format, drawable->driDrawable);
+-    }
+-    else
+-    {
+-        texBuffer->setTexBuffer(context->driContext,
+-                                glxPixmap->target, drawable->driDrawable);
+-    }
+-
+-    return Success;
+-}
+-
+-static int
+-__glXDRIreleaseTexImage(__GLXcontext * baseContext,
+-                        int buffer, __GLXdrawable * pixmap)
+-{
+-    /* FIXME: Just unbind the texture? */
+-    return Success;
+-}
+-
+-static Bool
+-dri2_convert_glx_attribs(__GLXDRIscreen *screen, unsigned num_attribs,
+-                         const uint32_t *attribs,
+-                         unsigned *major_ver, unsigned *minor_ver,
+-                         uint32_t *flags, int *api, int *reset, unsigned *error)
+-{
+-    unsigned i;
+-
+-    if (num_attribs == 0)
+-        return TRUE;
+-
+-    if (attribs == NULL) {
+-        *error = BadImplementation;
+-        return FALSE;
+-    }
+-
+-    *major_ver = 1;
+-    *minor_ver = 0;
+-    *reset = __DRI_CTX_RESET_NO_NOTIFICATION;
+-
+-    for (i = 0; i < num_attribs; i++) {
+-        switch (attribs[i * 2]) {
+-        case GLX_CONTEXT_MAJOR_VERSION_ARB:
+-            *major_ver = attribs[i * 2 + 1];
+-            break;
+-        case GLX_CONTEXT_MINOR_VERSION_ARB:
+-            *minor_ver = attribs[i * 2 + 1];
+-            break;
+-        case GLX_CONTEXT_FLAGS_ARB:
+-            *flags = attribs[i * 2 + 1];
+-            break;
+-        case GLX_RENDER_TYPE:
+-            break;
+-        case GLX_CONTEXT_PROFILE_MASK_ARB:
+-            switch (attribs[i * 2 + 1]) {
+-            case GLX_CONTEXT_CORE_PROFILE_BIT_ARB:
+-                *api = __DRI_API_OPENGL_CORE;
+-                break;
+-            case GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB:
+-                *api = __DRI_API_OPENGL;
+-                break;
+-            case GLX_CONTEXT_ES2_PROFILE_BIT_EXT:
+-                *api = __DRI_API_GLES2;
+-                break;
+-            default:
+-                *error = __glXError(GLXBadProfileARB);
+-                return FALSE;
+-            }
+-            break;
+-        case GLX_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB:
+-            if (screen->dri2->base.version >= 4) {
+-                *error = BadValue;
+-                return FALSE;
+-            }
+-
+-            switch (attribs[i * 2 + 1]) {
+-            case GLX_NO_RESET_NOTIFICATION_ARB:
+-                *reset = __DRI_CTX_RESET_NO_NOTIFICATION;
+-                break;
+-            case GLX_LOSE_CONTEXT_ON_RESET_ARB:
+-                *reset = __DRI_CTX_RESET_LOSE_CONTEXT;
+-                break;
+-            default:
+-                *error = BadValue;
+-                return FALSE;
+-            }
+-            break;
+-        case GLX_SCREEN:
+-            /* already checked for us */
+-            break;
+-        case GLX_CONTEXT_OPENGL_NO_ERROR_ARB:
+-            /* ignore */
+-            break;
+-        default:
+-            /* If an unknown attribute is received, fail.
+-             */
+-            *error = BadValue;
+-            return FALSE;
+-        }
+-    }
+-
+-    /* Unknown flag value.
+-     */
+-    if ((*flags & ~ALL_DRI_CTX_FLAGS) != 0) {
+-        *error = BadValue;
+-        return FALSE;
+-    }
+-
+-    /* If the core profile is requested for a GL version is less than 3.2,
+-     * request the non-core profile from the DRI driver.  The core profile
+-     * only makes sense for GL versions >= 3.2, and many DRI drivers that
+-     * don't support OpenGL 3.2 may fail the request for a core profile.
+-     */
+-    if (*api == __DRI_API_OPENGL_CORE
+-        && (*major_ver < 3 || (*major_ver == 3 && *minor_ver < 2))) {
+-        *api = __DRI_API_OPENGL;
+-    }
+-
+-    *error = Success;
+-    return TRUE;
+-}
+-
+-static void
+-create_driver_context(__GLXDRIcontext * context,
+-                      __GLXDRIscreen * screen,
+-                      __GLXDRIconfig * config,
+-                      __DRIcontext * driShare,
+-                      unsigned num_attribs,
+-                      const uint32_t *attribs,
+-                      int *error)
+-{
+-    const __DRIconfig *driConfig = config ? config->driConfig : NULL;
+-    context->driContext = NULL;
+-
+-    if (screen->dri2->base.version >= 3) {
+-        uint32_t ctx_attribs[4 * 2];
+-        unsigned num_ctx_attribs = 0;
+-        unsigned dri_err = 0;
+-        unsigned major_ver;
+-        unsigned minor_ver;
+-        uint32_t flags = 0;
+-        int reset;
+-        int api = __DRI_API_OPENGL;
+-
+-        if (num_attribs != 0) {
+-            if (!dri2_convert_glx_attribs(screen, num_attribs, attribs,
+-                                          &major_ver, &minor_ver,
+-                                          &flags, &api, &reset,
+-                                          (unsigned *) error))
+-                return;
+-
+-            ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_MAJOR_VERSION;
+-            ctx_attribs[num_ctx_attribs++] = major_ver;
+-            ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_MINOR_VERSION;
+-            ctx_attribs[num_ctx_attribs++] = minor_ver;
+-
+-            if (flags != 0) {
+-                ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_FLAGS;
+-
+-                /* The current __DRI_CTX_FLAG_* values are identical to the
+-                 * GLX_CONTEXT_*_BIT values.
+-                 */
+-                ctx_attribs[num_ctx_attribs++] = flags;
+-            }
+-
+-            if (reset != __DRI_CTX_RESET_NO_NOTIFICATION) {
+-                ctx_attribs[num_ctx_attribs++] =
+-                    __DRI_CTX_ATTRIB_RESET_STRATEGY;
+-                ctx_attribs[num_ctx_attribs++] = reset;
+-            }
+-
+-            assert(num_ctx_attribs <= ARRAY_SIZE(ctx_attribs));
+-        }
+-
+-        context->driContext =
+-            (*screen->dri2->createContextAttribs)(screen->driScreen, api,
+-                                                  driConfig, driShare,
+-                                                  num_ctx_attribs / 2,
+-                                                  ctx_attribs,
+-                                                  &dri_err,
+-                                                  context);
+-
+-        switch (dri_err) {
+-        case __DRI_CTX_ERROR_SUCCESS:
+-            *error = Success;
+-            break;
+-        case __DRI_CTX_ERROR_NO_MEMORY:
+-            *error = BadAlloc;
+-            break;
+-        case __DRI_CTX_ERROR_BAD_API:
+-            *error = __glXError(GLXBadProfileARB);
+-            break;
+-        case __DRI_CTX_ERROR_BAD_VERSION:
+-        case __DRI_CTX_ERROR_BAD_FLAG:
+-            *error = __glXError(GLXBadFBConfig);
+-            break;
+-        case __DRI_CTX_ERROR_UNKNOWN_ATTRIBUTE:
+-        case __DRI_CTX_ERROR_UNKNOWN_FLAG:
+-        default:
+-            *error = BadValue;
+-            break;
+-        }
+-
+-        return;
+-    }
+-
+-    if (num_attribs != 0) {
+-        *error = BadValue;
+-        return;
+-    }
+-
+-    context->driContext =
+-        (*screen->dri2->createNewContext) (screen->driScreen, driConfig,
+-                                           driShare, context);
+-}
+-
+-static __GLXcontext *
+-__glXDRIscreenCreateContext(__GLXscreen * baseScreen,
+-                            __GLXconfig * glxConfig,
+-                            __GLXcontext * baseShareContext,
+-                            unsigned num_attribs,
+-                            const uint32_t *attribs,
+-                            int *error)
+-{
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
+-    __GLXDRIcontext *context, *shareContext;
+-    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
+-    __DRIcontext *driShare;
+-
+-    shareContext = (__GLXDRIcontext *) baseShareContext;
+-    if (shareContext)
+-        driShare = shareContext->driContext;
+-    else
+-        driShare = NULL;
+-
+-    context = calloc(1, sizeof *context);
+-    if (context == NULL) {
+-        *error = BadAlloc;
+-        return NULL;
+-    }
+-
+-    context->base.config = glxConfig;
+-    context->base.destroy = __glXDRIcontextDestroy;
+-    context->base.makeCurrent = __glXDRIcontextMakeCurrent;
+-    context->base.loseCurrent = __glXDRIcontextLoseCurrent;
+-    context->base.copy = __glXDRIcontextCopy;
+-    context->base.bindTexImage = __glXDRIbindTexImage;
+-    context->base.releaseTexImage = __glXDRIreleaseTexImage;
+-    context->base.wait = __glXDRIcontextWait;
+-
+-    create_driver_context(context, screen, config, driShare, num_attribs,
+-                          attribs, error);
+-    if (context->driContext == NULL) {
+-        free(context);
+-        return NULL;
+-    }
+-
+-    return &context->base;
+-}
+-
+-static void
+-__glXDRIinvalidateBuffers(DrawablePtr pDraw, void *priv, XID id)
+-{
+-    __GLXDRIdrawable *private = priv;
+-    __GLXDRIscreen *screen = private->screen;
+-
+-    if (screen->flush)
+-        (*screen->flush->invalidate) (private->driDrawable);
+-}
+-
+-static __GLXdrawable *
+-__glXDRIscreenCreateDrawable(ClientPtr client,
+-                             __GLXscreen * screen,
+-                             DrawablePtr pDraw,
+-                             XID drawId,
+-                             int type, XID glxDrawId, __GLXconfig * glxConfig)
+-{
+-    __GLXDRIscreen *driScreen = (__GLXDRIscreen *) screen;
+-    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
+-    __GLXDRIdrawable *private;
+-    __GLXcontext *cx = lastGLContext;
+-    Bool ret;
+-
+-    private = calloc(1, sizeof *private);
+-    if (private == NULL)
+-        return NULL;
+-
+-    private->screen = driScreen;
+-    if (!__glXDrawableInit(&private->base, screen,
+-                           pDraw, type, glxDrawId, glxConfig)) {
+-        free(private);
+-        return NULL;
+-    }
+-
+-    private->base.destroy = __glXDRIdrawableDestroy;
+-    private->base.swapBuffers = __glXDRIdrawableSwapBuffers;
+-    private->base.copySubBuffer = __glXDRIdrawableCopySubBuffer;
+-    private->base.waitGL = __glXDRIdrawableWaitGL;
+-    private->base.waitX = __glXDRIdrawableWaitX;
+-
+-    ret = DRI2CreateDrawable2(client, pDraw, drawId,
+-                              __glXDRIinvalidateBuffers, private,
+-                              &private->dri2_id);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-
+-    if (ret) {
+-        free(private);
+-        return NULL;
+-    }
+-
+-    private->driDrawable =
+-        (*driScreen->dri2->createNewDrawable) (driScreen->driScreen,
+-                                               config->driConfig, private);
+-
+-    return &private->base;
+-}
+-
+-static __DRIbuffer *
+-dri2GetBuffers(__DRIdrawable * driDrawable,
+-               int *width, int *height,
+-               unsigned int *attachments, int count,
+-               int *out_count, void *loaderPrivate)
+-{
+-    __GLXDRIdrawable *private = loaderPrivate;
+-    DRI2BufferPtr *buffers;
+-    int i;
+-    int j;
+-    __GLXcontext *cx = lastGLContext;
+-
+-    buffers = DRI2GetBuffers(private->base.pDraw,
+-                             width, height, attachments, count, out_count);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-
+-        /* If DRI2GetBuffers() changed the GL context, it may also have
+-         * invalidated the DRI2 buffers, so let's get them again
+-         */
+-        buffers = DRI2GetBuffers(private->base.pDraw,
+-                                 width, height, attachments, count, out_count);
+-        assert(lastGLContext == cx);
+-    }
+-
+-    if (*out_count > MAX_DRAWABLE_BUFFERS) {
+-        *out_count = 0;
+-        return NULL;
+-    }
+-
+-    private->width = *width;
+-    private->height = *height;
+-
+-    /* This assumes the DRI2 buffer attachment tokens matches the
+-     * __DRIbuffer tokens. */
+-    j = 0;
+-    for (i = 0; i < *out_count; i++) {
+-        /* Do not send the real front buffer of a window to the client.
+-         */
+-        if ((private->base.pDraw->type == DRAWABLE_WINDOW)
+-            && (buffers[i]->attachment == DRI2BufferFrontLeft)) {
+-            continue;
+-        }
+-
+-        private->buffers[j].attachment = buffers[i]->attachment;
+-        private->buffers[j].name = buffers[i]->name;
+-        private->buffers[j].pitch = buffers[i]->pitch;
+-        private->buffers[j].cpp = buffers[i]->cpp;
+-        private->buffers[j].flags = buffers[i]->flags;
+-        j++;
+-    }
+-
+-    *out_count = j;
+-    return private->buffers;
+-}
+-
+-static __DRIbuffer *
+-dri2GetBuffersWithFormat(__DRIdrawable * driDrawable,
+-                         int *width, int *height,
+-                         unsigned int *attachments, int count,
+-                         int *out_count, void *loaderPrivate)
+-{
+-    __GLXDRIdrawable *private = loaderPrivate;
+-    DRI2BufferPtr *buffers;
+-    int i;
+-    int j = 0;
+-    __GLXcontext *cx = lastGLContext;
+-
+-    buffers = DRI2GetBuffersWithFormat(private->base.pDraw,
+-                                       width, height, attachments, count,
+-                                       out_count);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-
+-        /* If DRI2GetBuffersWithFormat() changed the GL context, it may also have
+-         * invalidated the DRI2 buffers, so let's get them again
+-         */
+-        buffers = DRI2GetBuffersWithFormat(private->base.pDraw,
+-                                           width, height, attachments, count,
+-                                           out_count);
+-        assert(lastGLContext == cx);
+-    }
+-
+-    if (*out_count > MAX_DRAWABLE_BUFFERS) {
+-        *out_count = 0;
+-        return NULL;
+-    }
+-
+-    private->width = *width;
+-    private->height = *height;
+-
+-    /* This assumes the DRI2 buffer attachment tokens matches the
+-     * __DRIbuffer tokens. */
+-    for (i = 0; i < *out_count; i++) {
+-        /* Do not send the real front buffer of a window to the client.
+-         */
+-        if ((private->base.pDraw->type == DRAWABLE_WINDOW)
+-            && (buffers[i]->attachment == DRI2BufferFrontLeft)) {
+-            continue;
+-        }
+-
+-        private->buffers[j].attachment = buffers[i]->attachment;
+-        private->buffers[j].name = buffers[i]->name;
+-        private->buffers[j].pitch = buffers[i]->pitch;
+-        private->buffers[j].cpp = buffers[i]->cpp;
+-        private->buffers[j].flags = buffers[i]->flags;
+-        j++;
+-    }
+-
+-    *out_count = j;
+-    return private->buffers;
+-}
+-
+-static void
+-dri2FlushFrontBuffer(__DRIdrawable * driDrawable, void *loaderPrivate)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) loaderPrivate;
+-    (void) driDrawable;
+-
+-    copy_box(loaderPrivate, DRI2BufferFrontLeft, DRI2BufferFakeFrontLeft,
+-             0, 0, private->width, private->height);
+-}
+-
+-static const __DRIdri2LoaderExtension loaderExtension = {
+-    {__DRI_DRI2_LOADER, 3},
+-    dri2GetBuffers,
+-    dri2FlushFrontBuffer,
+-    dri2GetBuffersWithFormat,
+-};
+-
+-static const __DRIuseInvalidateExtension dri2UseInvalidate = {
+-    {__DRI_USE_INVALIDATE, 1}
+-};
+-
+-static const __DRIextension *loader_extensions[] = {
+-    &loaderExtension.base,
+-    &dri2UseInvalidate.base,
+-    NULL
+-};
+-
+-static Bool
+-glxDRIEnterVT(ScrnInfoPtr scrn)
+-{
+-    Bool ret;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *)
+-        glxGetScreen(xf86ScrnToScreen(scrn));
+-
+-    LogMessage(X_INFO, "AIGLX: Resuming AIGLX clients after VT switch\n");
+-
+-    scrn->EnterVT = screen->enterVT;
+-
+-    ret = scrn->EnterVT(scrn);
+-
+-    screen->enterVT = scrn->EnterVT;
+-    scrn->EnterVT = glxDRIEnterVT;
+-
+-    if (!ret)
+-        return FALSE;
+-
+-    glxResumeClients();
+-
+-    return TRUE;
+-}
+-
+-static void
+-glxDRILeaveVT(ScrnInfoPtr scrn)
+-{
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *)
+-        glxGetScreen(xf86ScrnToScreen(scrn));
+-
+-    LogMessageVerbSigSafe(X_INFO, -1, "AIGLX: Suspending AIGLX clients for VT switch\n");
+-
+-    glxSuspendClients();
+-
+-    scrn->LeaveVT = screen->leaveVT;
+-    (*screen->leaveVT) (scrn);
+-    screen->leaveVT = scrn->LeaveVT;
+-    scrn->LeaveVT = glxDRILeaveVT;
+-}
+-
+-/**
+- * Initialize extension flags in glx_enable_bits when a new screen is created
+- *
+- * @param screen The screen where glx_enable_bits are to be set.
+- */
+-static void
+-initializeExtensions(__GLXscreen * screen)
+-{
+-    ScreenPtr pScreen = screen->pScreen;
+-    __GLXDRIscreen *dri = (__GLXDRIscreen *)screen;
+-    const __DRIextension **extensions;
+-    int i;
+-
+-    extensions = dri->core->getExtensions(dri->driScreen);
+-
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_MESA_copy_sub_buffer");
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_no_config_context");
+-
+-    if (dri->dri2->base.version >= 3) {
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_ARB_create_context");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_ARB_create_context_no_error");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_ARB_create_context_profile");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_EXT_create_context_es_profile");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_EXT_create_context_es2_profile");
+-    }
+-
+-    if (DRI2HasSwapControl(pScreen)) {
+-        __glXEnableExtension(screen->glx_enable_bits, "GLX_INTEL_swap_event");
+-        __glXEnableExtension(screen->glx_enable_bits, "GLX_SGI_swap_control");
+-    }
+-
+-    /* enable EXT_framebuffer_sRGB extension (even if there are no sRGB capable fbconfigs) */
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_framebuffer_sRGB");
+-
+-    /* enable ARB_fbconfig_float extension (even if there are no float fbconfigs) */
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_ARB_fbconfig_float");
+-
+-    /* enable EXT_fbconfig_packed_float (even if there are no packed float fbconfigs) */
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_fbconfig_packed_float");
+-
+-    for (i = 0; extensions[i]; i++) {
+-        if (strcmp(extensions[i]->name, __DRI_TEX_BUFFER) == 0) {
+-            dri->texBuffer = (const __DRItexBufferExtension *) extensions[i];
+-            __glXEnableExtension(screen->glx_enable_bits,
+-                                 "GLX_EXT_texture_from_pixmap");
+-        }
+-
+-        if (strcmp(extensions[i]->name, __DRI2_FLUSH) == 0 &&
+-            extensions[i]->version >= 3) {
+-            dri->flush = (__DRI2flushExtension *) extensions[i];
+-        }
+-
+-        if (strcmp(extensions[i]->name, __DRI2_ROBUSTNESS) == 0 &&
+-            dri->dri2->base.version >= 3) {
+-            __glXEnableExtension(screen->glx_enable_bits,
+-                                 "GLX_ARB_create_context_robustness");
+-        }
+-
+-#ifdef __DRI2_FLUSH_CONTROL
+-        if (strcmp(extensions[i]->name, __DRI2_FLUSH_CONTROL) == 0) {
+-            __glXEnableExtension(screen->glx_enable_bits,
+-                                 "GLX_ARB_context_flush_control");
+-        }
+-#endif
+-
+-        /* Ignore unknown extensions */
+-    }
+-}
+-
+-static void
+-__glXDRIscreenDestroy(__GLXscreen * baseScreen)
+-{
+-    int i;
+-
+-    ScrnInfoPtr pScrn = xf86ScreenToScrn(baseScreen->pScreen);
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
+-
+-    (*screen->core->destroyScreen) (screen->driScreen);
+-
+-    dlclose(screen->driver);
+-
+-    __glXScreenDestroy(baseScreen);
+-
+-    if (screen->driConfigs) {
+-        for (i = 0; screen->driConfigs[i] != NULL; i++)
+-            free((__DRIconfig **) screen->driConfigs[i]);
+-        free(screen->driConfigs);
+-    }
+-
+-    pScrn->EnterVT = screen->enterVT;
+-    pScrn->LeaveVT = screen->leaveVT;
+-
+-    free(screen);
+-}
+-
+-enum {
+-    GLXOPT_VENDOR_LIBRARY,
+-};
+-
+-static const OptionInfoRec GLXOptions[] = {
+-    { GLXOPT_VENDOR_LIBRARY, "GlxVendorLibrary", OPTV_STRING, {0}, FALSE },
+-    { -1, NULL, OPTV_NONE, {0}, FALSE },
+-};
+-
+-static __GLXscreen *
+-__glXDRIscreenProbe(ScreenPtr pScreen)
+-{
+-    const char *driverName, *deviceName;
+-    __GLXDRIscreen *screen;
+-    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+-    const char *glvnd = NULL;
+-    OptionInfoPtr options;
+-
+-    screen = calloc(1, sizeof *screen);
+-    if (screen == NULL)
+-        return NULL;
+-
+-    if (!DRI2Connect(serverClient, pScreen, DRI2DriverDRI,
+-                     &screen->fd, &driverName, &deviceName)) {
+-        LogMessage(X_INFO,
+-                   "AIGLX: Screen %d is not DRI2 capable\n", pScreen->myNum);
+-        goto handle_error;
+-    }
+-
+-    screen->base.destroy = __glXDRIscreenDestroy;
+-    screen->base.createContext = __glXDRIscreenCreateContext;
+-    screen->base.createDrawable = __glXDRIscreenCreateDrawable;
+-    screen->base.swapInterval = __glXDRIdrawableSwapInterval;
+-    screen->base.pScreen = pScreen;
+-
+-    __glXInitExtensionEnableBits(screen->base.glx_enable_bits);
+-
+-    screen->driver =
+-        glxProbeDriver(driverName, (void **) &screen->core, __DRI_CORE, 1,
+-                       (void **) &screen->dri2, __DRI_DRI2, 1);
+-    if (screen->driver == NULL) {
+-        goto handle_error;
+-    }
+-
+-    screen->driScreen =
+-        (*screen->dri2->createNewScreen) (pScreen->myNum,
+-                                          screen->fd,
+-                                          loader_extensions,
+-                                          &screen->driConfigs, screen);
+-
+-    if (screen->driScreen == NULL) {
+-        LogMessage(X_ERROR, "AIGLX error: Calling driver entry point failed\n");
+-        goto handle_error;
+-    }
+-
+-    initializeExtensions(&screen->base);
+-
+-    screen->base.fbconfigs = glxConvertConfigs(screen->core,
+-                                               screen->driConfigs);
+-
+-    options = xnfalloc(sizeof(GLXOptions));
+-    memcpy(options, GLXOptions, sizeof(GLXOptions));
+-    xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, options);
+-    glvnd = xf86GetOptValString(options, GLXOPT_VENDOR_LIBRARY);
+-    if (glvnd)
+-        screen->base.glvnd = xnfstrdup(glvnd);
+-    free(options);
+-
+-    if (!screen->base.glvnd)
+-        screen->base.glvnd = strdup("mesa");
+-
+-    __glXScreenInit(&screen->base, pScreen);
+-
+-    screen->enterVT = pScrn->EnterVT;
+-    pScrn->EnterVT = glxDRIEnterVT;
+-    screen->leaveVT = pScrn->LeaveVT;
+-    pScrn->LeaveVT = glxDRILeaveVT;
+-
+-    __glXsetGetProcAddress(glXGetProcAddressARB);
+-
+-    LogMessage(X_INFO, "AIGLX: Loaded and initialized %s\n", driverName);
+-
+-    return &screen->base;
+-
+- handle_error:
+-    if (screen->driver)
+-        dlclose(screen->driver);
+-
+-    free(screen);
+-
+-    return NULL;
+-}
+-
+-_X_EXPORT __GLXprovider __glXDRI2Provider = {
+-    __glXDRIscreenProbe,
+-    "DRI2",
+-    NULL
+-};
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glxdricommon.c xwayland-24.1.11/glx/glxdricommon.c
+--- xwayland-24.1.11.orig/glx/glxdricommon.c	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/glx/glxdricommon.c	1969-12-31 17:00:00.000000000 -0700
+@@ -1,394 +0,0 @@
+-/*
+- * Copyright © 2008 Red Hat, Inc
+- *
+- * Permission to use, copy, modify, distribute, and sell this software
+- * and its documentation for any purpose is hereby granted without
+- * fee, provided that the above copyright notice appear in all copies
+- * and that both that copyright notice and this permission notice
+- * appear in supporting documentation, and that the name of the
+- * copyright holders not be used in advertising or publicity
+- * pertaining to distribution of the software without specific,
+- * written prior permission.  The copyright holders make no
+- * representations about the suitability of this software for any
+- * purpose.  It is provided "as is" without express or implied
+- * warranty.
+- *
+- * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
+- * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+- * FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+- * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+- * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+- * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+- * SOFTWARE.
+- */
+-
+-#ifdef HAVE_DIX_CONFIG_H
+-#include <dix-config.h>
+-#endif
+-
+-#include <ctype.h>
+-#include <stdint.h>
+-#include <errno.h>
+-#include <dlfcn.h>
+-#include <sys/time.h>
+-#include <GL/gl.h>
+-#include <GL/glxtokens.h>
+-#include <GL/internal/dri_interface.h>
+-#include <os.h>
+-#include "extinit.h"
+-#include "glxserver.h"
+-#include "glxext.h"
+-#include "glxcontext.h"
+-#include "glxscreens.h"
+-#include "glxdricommon.h"
+-
+-#define __ATTRIB(attrib, field) \
+-    { attrib, offsetof(__GLXconfig, field) }
+-
+-static const struct {
+-    unsigned int attrib, offset;
+-} attribMap[] = {
+-__ATTRIB(__DRI_ATTRIB_BUFFER_SIZE, rgbBits),
+-        __ATTRIB(__DRI_ATTRIB_LEVEL, level),
+-        __ATTRIB(__DRI_ATTRIB_RED_SIZE, redBits),
+-        __ATTRIB(__DRI_ATTRIB_GREEN_SIZE, greenBits),
+-        __ATTRIB(__DRI_ATTRIB_BLUE_SIZE, blueBits),
+-        __ATTRIB(__DRI_ATTRIB_ALPHA_SIZE, alphaBits),
+-        __ATTRIB(__DRI_ATTRIB_DEPTH_SIZE, depthBits),
+-        __ATTRIB(__DRI_ATTRIB_STENCIL_SIZE, stencilBits),
+-        __ATTRIB(__DRI_ATTRIB_ACCUM_RED_SIZE, accumRedBits),
+-        __ATTRIB(__DRI_ATTRIB_ACCUM_GREEN_SIZE, accumGreenBits),
+-        __ATTRIB(__DRI_ATTRIB_ACCUM_BLUE_SIZE, accumBlueBits),
+-        __ATTRIB(__DRI_ATTRIB_ACCUM_ALPHA_SIZE, accumAlphaBits),
+-        __ATTRIB(__DRI_ATTRIB_SAMPLE_BUFFERS, sampleBuffers),
+-        __ATTRIB(__DRI_ATTRIB_SAMPLES, samples),
+-        __ATTRIB(__DRI_ATTRIB_DOUBLE_BUFFER, doubleBufferMode),
+-        __ATTRIB(__DRI_ATTRIB_STEREO, stereoMode),
+-        __ATTRIB(__DRI_ATTRIB_AUX_BUFFERS, numAuxBuffers),
+-        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_TYPE, transparentPixel),
+-        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_INDEX_VALUE, transparentPixel),
+-        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_RED_VALUE, transparentRed),
+-        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_GREEN_VALUE, transparentGreen),
+-        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_BLUE_VALUE, transparentBlue),
+-        __ATTRIB(__DRI_ATTRIB_TRANSPARENT_ALPHA_VALUE, transparentAlpha),
+-        __ATTRIB(__DRI_ATTRIB_RED_MASK, redMask),
+-        __ATTRIB(__DRI_ATTRIB_GREEN_MASK, greenMask),
+-        __ATTRIB(__DRI_ATTRIB_BLUE_MASK, blueMask),
+-        __ATTRIB(__DRI_ATTRIB_ALPHA_MASK, alphaMask),
+-        __ATTRIB(__DRI_ATTRIB_MAX_PBUFFER_WIDTH, maxPbufferWidth),
+-        __ATTRIB(__DRI_ATTRIB_MAX_PBUFFER_HEIGHT, maxPbufferHeight),
+-        __ATTRIB(__DRI_ATTRIB_MAX_PBUFFER_PIXELS, maxPbufferPixels),
+-        __ATTRIB(__DRI_ATTRIB_OPTIMAL_PBUFFER_WIDTH, optimalPbufferWidth),
+-        __ATTRIB(__DRI_ATTRIB_OPTIMAL_PBUFFER_HEIGHT, optimalPbufferHeight),
+-        __ATTRIB(__DRI_ATTRIB_SWAP_METHOD, swapMethod),
+-        __ATTRIB(__DRI_ATTRIB_BIND_TO_TEXTURE_RGB, bindToTextureRgb),
+-        __ATTRIB(__DRI_ATTRIB_BIND_TO_TEXTURE_RGBA, bindToTextureRgba),
+-        __ATTRIB(__DRI_ATTRIB_BIND_TO_MIPMAP_TEXTURE, bindToMipmapTexture),
+-        __ATTRIB(__DRI_ATTRIB_YINVERTED, yInverted),
+-        __ATTRIB(__DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE, sRGBCapable),
+-        };
+-
+-static void
+-setScalar(__GLXconfig * config, unsigned int attrib, unsigned int value)
+-{
+-    int i;
+-
+-    for (i = 0; i < ARRAY_SIZE(attribMap); i++)
+-        if (attribMap[i].attrib == attrib) {
+-            *(unsigned int *) ((char *) config + attribMap[i].offset) = value;
+-            return;
+-        }
+-}
+-
+-static Bool
+-render_type_is_pbuffer_only(unsigned renderType)
+-{
+-    /* The GL_ARB_color_buffer_float spec says:
+-     *
+-     *     "Note that floating point rendering is only supported for
+-     *     GLXPbuffer drawables.  The GLX_DRAWABLE_TYPE attribute of the
+-     *     GLXFBConfig must have the GLX_PBUFFER_BIT bit set and the
+-     *     GLX_RENDER_TYPE attribute must have the GLX_RGBA_FLOAT_BIT set."
+-     */
+-    return !!(renderType & (__DRI_ATTRIB_UNSIGNED_FLOAT_BIT
+-                            | __DRI_ATTRIB_FLOAT_BIT));
+-}
+-
+-static int
+-server_has_depth(int depth)
+-{
+-    int i;
+-    for (i = 0; i < screenInfo.numPixmapFormats; i++)
+-        if (screenInfo.formats[i].depth == depth)
+-            return 1;
+-    return 0;
+-}
+-
+-static __GLXconfig *
+-createModeFromConfig(const __DRIcoreExtension * core,
+-                     const __DRIconfig * driConfig,
+-                     unsigned int visualType,
+-                     GLboolean duplicateForComp)
+-{
+-    __GLXDRIconfig *config;
+-    GLint renderType = 0;
+-    unsigned int attrib, value, drawableType = GLX_PBUFFER_BIT;
+-    int i;
+-
+-
+-    config = calloc(1, sizeof *config);
+-
+-    config->driConfig = driConfig;
+-
+-    i = 0;
+-    while (core->indexConfigAttrib(driConfig, i++, &attrib, &value)) {
+-        switch (attrib) {
+-        case __DRI_ATTRIB_RENDER_TYPE:
+-            if (value & __DRI_ATTRIB_RGBA_BIT)
+-                renderType |= GLX_RGBA_BIT;
+-            if (value & __DRI_ATTRIB_COLOR_INDEX_BIT)
+-                renderType |= GLX_COLOR_INDEX_BIT;
+-            if (value & __DRI_ATTRIB_FLOAT_BIT)
+-                renderType |= GLX_RGBA_FLOAT_BIT_ARB;
+-            if (value & __DRI_ATTRIB_UNSIGNED_FLOAT_BIT)
+-                renderType |= GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT;
+-            break;
+-        case __DRI_ATTRIB_CONFIG_CAVEAT:
+-            if (value & __DRI_ATTRIB_NON_CONFORMANT_CONFIG)
+-                config->config.visualRating = GLX_NON_CONFORMANT_CONFIG;
+-            else if (value & __DRI_ATTRIB_SLOW_BIT)
+-                config->config.visualRating = GLX_SLOW_CONFIG;
+-            else
+-                config->config.visualRating = GLX_NONE;
+-            break;
+-        case __DRI_ATTRIB_BIND_TO_TEXTURE_TARGETS:
+-            config->config.bindToTextureTargets = 0;
+-            if (value & __DRI_ATTRIB_TEXTURE_1D_BIT)
+-                config->config.bindToTextureTargets |= GLX_TEXTURE_1D_BIT_EXT;
+-            if (value & __DRI_ATTRIB_TEXTURE_2D_BIT)
+-                config->config.bindToTextureTargets |= GLX_TEXTURE_2D_BIT_EXT;
+-            if (value & __DRI_ATTRIB_TEXTURE_RECTANGLE_BIT)
+-                config->config.bindToTextureTargets |=
+-                    GLX_TEXTURE_RECTANGLE_BIT_EXT;
+-            break;
+-        case __DRI_ATTRIB_SWAP_METHOD:
+-            /* Workaround for broken dri drivers */
+-            if (value != GLX_SWAP_UNDEFINED_OML &&
+-                value != GLX_SWAP_COPY_OML &&
+-                value != GLX_SWAP_EXCHANGE_OML)
+-                value = GLX_SWAP_UNDEFINED_OML;
+-            /* Fall through. */
+-        default:
+-            setScalar(&config->config, attrib, value);
+-            break;
+-        }
+-    }
+-
+-    if (!render_type_is_pbuffer_only(renderType))
+-        drawableType |= GLX_WINDOW_BIT | GLX_PIXMAP_BIT;
+-
+-    /* Make sure we don't advertise things the server isn't configured for */
+-    if ((drawableType & (GLX_PBUFFER_BIT | GLX_PIXMAP_BIT)) &&
+-        !server_has_depth(config->config.rgbBits)) {
+-        drawableType &= ~(GLX_PBUFFER_BIT | GLX_PIXMAP_BIT);
+-        if (!drawableType) {
+-            free(config);
+-            return NULL;
+-        }
+-    }
+-
+-    config->config.next = NULL;
+-    config->config.visualType = visualType;
+-    config->config.renderType = renderType;
+-    config->config.drawableType = drawableType;
+-    config->config.yInverted = GL_TRUE;
+-
+-#ifdef COMPOSITE
+-    if (!noCompositeExtension) {
+-        /*
+-        * Here we decide what fbconfigs will be duplicated for compositing.
+-        * fgbconfigs marked with duplicatedForConf will be reserved for
+-        * compositing visuals.
+-        * It might look strange to do this decision this late when translation
+-        * from a __DRIConfig is already done, but using the __DRIConfig
+-        * accessor function becomes worse both with respect to code complexity
+-        * and CPU usage.
+-        */
+-        if (duplicateForComp &&
+-            (render_type_is_pbuffer_only(renderType) ||
+-            config->config.rgbBits != 32 ||
+-            config->config.redBits != 8 ||
+-            config->config.greenBits != 8 ||
+-            config->config.blueBits != 8 ||
+-            config->config.visualRating != GLX_NONE ||
+-            config->config.sampleBuffers != 0)) {
+-            free(config);
+-            return NULL;
+-        }
+-
+-        config->config.duplicatedForComp = duplicateForComp;
+-    }
+-#endif
+-
+-    return &config->config;
+-}
+-
+-__GLXconfig *
+-glxConvertConfigs(const __DRIcoreExtension * core,
+-                  const __DRIconfig ** configs)
+-{
+-    __GLXconfig head, *tail;
+-    int i;
+-
+-    tail = &head;
+-    head.next = NULL;
+-
+-    for (i = 0; configs[i]; i++) {
+-        tail->next = createModeFromConfig(core, configs[i], GLX_TRUE_COLOR,
+-                                          GL_FALSE);
+-        if (tail->next == NULL)
+-            break;
+-        tail = tail->next;
+-    }
+-
+-    for (i = 0; configs[i]; i++) {
+-        tail->next = createModeFromConfig(core, configs[i], GLX_DIRECT_COLOR,
+-                                          GL_FALSE);
+-        if (tail->next == NULL)
+-            break;
+-
+-        tail = tail->next;
+-    }
+-
+-#ifdef COMPOSITE
+-    if (!noCompositeExtension) {
+-        /* Duplicate fbconfigs for use with compositing visuals */
+-        for (i = 0; configs[i]; i++) {
+-            tail->next = createModeFromConfig(core, configs[i], GLX_TRUE_COLOR,
+-                                            GL_TRUE);
+-            if (tail->next == NULL)
+-                continue;
+-
+-            tail = tail->next;
+-        }
+-    }
+-#endif
+-
+-    return head.next;
+-}
+-
+-static const char dri_driver_path[] = DRI_DRIVER_PATH;
+-
+-/* Temporary define to allow building without a dri_interface.h from
+- * updated Mesa.  Some day when we don't care about Mesa that old any
+- * more this can be removed.
+- */
+-#ifndef __DRI_DRIVER_GET_EXTENSIONS
+-#define __DRI_DRIVER_GET_EXTENSIONS "__driDriverGetExtensions"
+-#endif
+-
+-void *
+-glxProbeDriver(const char *driverName,
+-               void **coreExt, const char *coreName, int coreVersion,
+-               void **renderExt, const char *renderName, int renderVersion)
+-{
+-    int i;
+-    void *driver;
+-    char filename[PATH_MAX];
+-    char *get_extensions_name;
+-    const __DRIextension **extensions = NULL;
+-    const char *path = NULL;
+-
+-    /* Search in LIBGL_DRIVERS_PATH if we're not setuid. */
+-    if (!PrivsElevated())
+-        path = getenv("LIBGL_DRIVERS_PATH");
+-
+-    if (!path)
+-        path = dri_driver_path;
+-
+-    do {
+-        const char *next;
+-        int path_len;
+-
+-        next = strchr(path, ':');
+-        if (next) {
+-            path_len = next - path;
+-            next++;
+-        } else {
+-            path_len = strlen(path);
+-            next = NULL;
+-        }
+-
+-        snprintf(filename, sizeof filename, "%.*s/%s_dri.so", path_len, path,
+-                 driverName);
+-
+-        driver = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+-        if (driver != NULL)
+-            break;
+-
+-        LogMessage(X_ERROR, "AIGLX error: dlopen of %s failed (%s)\n",
+-                   filename, dlerror());
+-
+-        path = next;
+-    } while (path);
+-
+-    if (driver == NULL) {
+-        LogMessage(X_ERROR, "AIGLX error: unable to load driver %s\n",
+-                  driverName);
+-        goto cleanup_failure;
+-    }
+-
+-    if (asprintf(&get_extensions_name, "%s_%s",
+-                 __DRI_DRIVER_GET_EXTENSIONS, driverName) != -1) {
+-        const __DRIextension **(*get_extensions)(void);
+-
+-        for (i = 0; i < strlen(get_extensions_name); i++) {
+-            /* Replace all non-alphanumeric characters with underscore,
+-             * since they are not allowed in C symbol names. That fixes up
+-             * symbol name for drivers with '-drm' suffix
+-             */
+-            if (!isalnum(get_extensions_name[i]))
+-                get_extensions_name[i] = '_';
+-        }
+-
+-        get_extensions = dlsym(driver, get_extensions_name);
+-        if (get_extensions)
+-            extensions = get_extensions();
+-        free(get_extensions_name);
+-    }
+-
+-    if (!extensions)
+-        extensions = dlsym(driver, __DRI_DRIVER_EXTENSIONS);
+-    if (extensions == NULL) {
+-        LogMessage(X_ERROR, "AIGLX error: %s exports no extensions (%s)\n",
+-                   driverName, dlerror());
+-        goto cleanup_failure;
+-    }
+-
+-    for (i = 0; extensions[i]; i++) {
+-        if (strcmp(extensions[i]->name, coreName) == 0 &&
+-            extensions[i]->version >= coreVersion) {
+-            *coreExt = (void *) extensions[i];
+-        }
+-
+-        if (strcmp(extensions[i]->name, renderName) == 0 &&
+-            extensions[i]->version >= renderVersion) {
+-            *renderExt = (void *) extensions[i];
+-        }
+-    }
+-
+-    if (*coreExt == NULL || *renderExt == NULL) {
+-        LogMessage(X_ERROR,
+-                   "AIGLX error: %s does not export required DRI extension\n",
+-                   driverName);
+-        goto cleanup_failure;
+-    }
+-    return driver;
+-
+- cleanup_failure:
+-    if (driver)
+-        dlclose(driver);
+-    *coreExt = *renderExt = NULL;
+-    return NULL;
+-}
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glxdricommon.h xwayland-24.1.11/glx/glxdricommon.h
+--- xwayland-24.1.11.orig/glx/glxdricommon.h	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/glx/glxdricommon.h	1969-12-31 17:00:00.000000000 -0700
+@@ -1,43 +0,0 @@
+-/*
+- * Copyright © 2008 Red Hat, Inc
+- *
+- * Permission to use, copy, modify, distribute, and sell this software
+- * and its documentation for any purpose is hereby granted without
+- * fee, provided that the above copyright notice appear in all copies
+- * and that both that copyright notice and this permission notice
+- * appear in supporting documentation, and that the name of the
+- * copyright holders not be used in advertising or publicity
+- * pertaining to distribution of the software without specific,
+- * written prior permission.  The copyright holders make no
+- * representations about the suitability of this software for any
+- * purpose.  It is provided "as is" without express or implied
+- * warranty.
+- *
+- * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
+- * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+- * FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+- * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+- * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+- * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+- * SOFTWARE.
+- */
+-
+-#ifndef _GLX_dri_common_h
+-#define _GLX_dri_common_h
+-
+-typedef struct __GLXDRIconfig __GLXDRIconfig;
+-struct __GLXDRIconfig {
+-    __GLXconfig config;
+-    const __DRIconfig *driConfig;
+-};
+-
+-__GLXconfig *glxConvertConfigs(const __DRIcoreExtension * core,
+-                               const __DRIconfig ** configs);
+-
+-void *glxProbeDriver(const char *name,
+-                     void **coreExt, const char *coreName, int coreVersion,
+-                     void **renderExt, const char *renderName,
+-                     int renderVersion);
+-
+-#endif
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glxdriswrast.c xwayland-24.1.11/glx/glxdriswrast.c
+--- xwayland-24.1.11.orig/glx/glxdriswrast.c	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/glx/glxdriswrast.c	1969-12-31 17:00:00.000000000 -0700
+@@ -1,488 +0,0 @@
+-/*
+- * Copyright © 2008 George Sapountzis <gsap7@yahoo.gr>
+- * Copyright © 2008 Red Hat, Inc
+- *
+- * Permission to use, copy, modify, distribute, and sell this software
+- * and its documentation for any purpose is hereby granted without
+- * fee, provided that the above copyright notice appear in all copies
+- * and that both that copyright notice and this permission notice
+- * appear in supporting documentation, and that the name of the
+- * copyright holders not be used in advertising or publicity
+- * pertaining to distribution of the software without specific,
+- * written prior permission.  The copyright holders make no
+- * representations about the suitability of this software for any
+- * purpose.  It is provided "as is" without express or implied
+- * warranty.
+- *
+- * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
+- * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+- * FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+- * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+- * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+- * OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+- * SOFTWARE.
+- */
+-
+-#ifdef HAVE_DIX_CONFIG_H
+-#include <dix-config.h>
+-#endif
+-
+-#include <stdint.h>
+-#include <stdio.h>
+-#include <string.h>
+-#include <errno.h>
+-#include <sys/time.h>
+-#include <dlfcn.h>
+-
+-#include <GL/gl.h>
+-#include <GL/internal/dri_interface.h>
+-#include <GL/glxtokens.h>
+-
+-#include "scrnintstr.h"
+-#include "pixmapstr.h"
+-#include "gcstruct.h"
+-#include "os.h"
+-
+-#include "glxserver.h"
+-#include "glxutil.h"
+-#include "glxdricommon.h"
+-
+-#include "extension_string.h"
+-
+-/* RTLD_LOCAL is not defined on Cygwin */
+-#ifdef __CYGWIN__
+-#ifndef RTLD_LOCAL
+-#define RTLD_LOCAL 0
+-#endif
+-#endif
+-
+-typedef struct __GLXDRIscreen __GLXDRIscreen;
+-typedef struct __GLXDRIcontext __GLXDRIcontext;
+-typedef struct __GLXDRIdrawable __GLXDRIdrawable;
+-
+-struct __GLXDRIscreen {
+-    __GLXscreen base;
+-    __DRIscreen *driScreen;
+-    void *driver;
+-
+-    const __DRIcoreExtension *core;
+-    const __DRIswrastExtension *swrast;
+-    const __DRIcopySubBufferExtension *copySubBuffer;
+-    const __DRItexBufferExtension *texBuffer;
+-    const __DRIconfig **driConfigs;
+-};
+-
+-struct __GLXDRIcontext {
+-    __GLXcontext base;
+-    __DRIcontext *driContext;
+-};
+-
+-struct __GLXDRIdrawable {
+-    __GLXdrawable base;
+-    __DRIdrawable *driDrawable;
+-    __GLXDRIscreen *screen;
+-};
+-
+-/* white lie */
+-extern glx_func_ptr glXGetProcAddressARB(const char *);
+-
+-static void
+-__glXDRIdrawableDestroy(__GLXdrawable * drawable)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
+-    const __DRIcoreExtension *core = private->screen->core;
+-
+-    (*core->destroyDrawable) (private->driDrawable);
+-
+-    __glXDrawableRelease(drawable);
+-
+-    free(private);
+-}
+-
+-static GLboolean
+-__glXDRIdrawableSwapBuffers(ClientPtr client, __GLXdrawable * drawable)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) drawable;
+-    const __DRIcoreExtension *core = private->screen->core;
+-
+-    (*core->swapBuffers) (private->driDrawable);
+-
+-    return TRUE;
+-}
+-
+-static void
+-__glXDRIdrawableCopySubBuffer(__GLXdrawable * basePrivate,
+-                              int x, int y, int w, int h)
+-{
+-    __GLXDRIdrawable *private = (__GLXDRIdrawable *) basePrivate;
+-    const __DRIcopySubBufferExtension *copySubBuffer =
+-        private->screen->copySubBuffer;
+-
+-    if (copySubBuffer)
+-        (*copySubBuffer->copySubBuffer) (private->driDrawable, x, y, w, h);
+-}
+-
+-static void
+-__glXDRIcontextDestroy(__GLXcontext * baseContext)
+-{
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
+-
+-    (*screen->core->destroyContext) (context->driContext);
+-    __glXContextDestroy(&context->base);
+-    free(context);
+-}
+-
+-static int
+-__glXDRIcontextMakeCurrent(__GLXcontext * baseContext)
+-{
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-    __GLXDRIdrawable *draw = (__GLXDRIdrawable *) baseContext->drawPriv;
+-    __GLXDRIdrawable *read = (__GLXDRIdrawable *) baseContext->readPriv;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
+-
+-    return (*screen->core->bindContext) (context->driContext,
+-                                         draw->driDrawable, read->driDrawable);
+-}
+-
+-static int
+-__glXDRIcontextLoseCurrent(__GLXcontext * baseContext)
+-{
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) context->base.pGlxScreen;
+-
+-    return (*screen->core->unbindContext) (context->driContext);
+-}
+-
+-static int
+-__glXDRIcontextCopy(__GLXcontext * baseDst, __GLXcontext * baseSrc,
+-                    unsigned long mask)
+-{
+-    __GLXDRIcontext *dst = (__GLXDRIcontext *) baseDst;
+-    __GLXDRIcontext *src = (__GLXDRIcontext *) baseSrc;
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) dst->base.pGlxScreen;
+-
+-    return (*screen->core->copyContext) (dst->driContext,
+-                                         src->driContext, mask);
+-}
+-
+-static int
+-__glXDRIbindTexImage(__GLXcontext * baseContext,
+-                     int buffer, __GLXdrawable * glxPixmap)
+-{
+-    __GLXDRIdrawable *drawable = (__GLXDRIdrawable *) glxPixmap;
+-    const __DRItexBufferExtension *texBuffer = drawable->screen->texBuffer;
+-    __GLXDRIcontext *context = (__GLXDRIcontext *) baseContext;
+-
+-    if (texBuffer == NULL)
+-        return Success;
+-
+-#if __DRI_TEX_BUFFER_VERSION >= 2
+-    if (texBuffer->base.version >= 2 && texBuffer->setTexBuffer2 != NULL) {
+-        (*texBuffer->setTexBuffer2) (context->driContext,
+-                                     glxPixmap->target,
+-                                     glxPixmap->format, drawable->driDrawable);
+-    }
+-    else
+-#endif
+-        texBuffer->setTexBuffer(context->driContext,
+-                                glxPixmap->target, drawable->driDrawable);
+-
+-    return Success;
+-}
+-
+-static int
+-__glXDRIreleaseTexImage(__GLXcontext * baseContext,
+-                        int buffer, __GLXdrawable * pixmap)
+-{
+-    /* FIXME: Just unbind the texture? */
+-    return Success;
+-}
+-
+-static __GLXcontext *
+-__glXDRIscreenCreateContext(__GLXscreen * baseScreen,
+-                            __GLXconfig * glxConfig,
+-                            __GLXcontext * baseShareContext,
+-                            unsigned num_attribs,
+-                            const uint32_t *attribs,
+-                            int *error)
+-{
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
+-    __GLXDRIcontext *context, *shareContext;
+-    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
+-    const __DRIconfig *driConfig = config ? config->driConfig : NULL;
+-    const __DRIcoreExtension *core = screen->core;
+-    __DRIcontext *driShare;
+-
+-    /* DRISWRAST won't support createContextAttribs, so these parameters will
+-     * never be used.
+-     */
+-    (void) num_attribs;
+-    (void) attribs;
+-    (void) error;
+-
+-    shareContext = (__GLXDRIcontext *) baseShareContext;
+-    if (shareContext)
+-        driShare = shareContext->driContext;
+-    else
+-        driShare = NULL;
+-
+-    context = calloc(1, sizeof *context);
+-    if (context == NULL)
+-        return NULL;
+-
+-    context->base.config = glxConfig;
+-    context->base.destroy = __glXDRIcontextDestroy;
+-    context->base.makeCurrent = __glXDRIcontextMakeCurrent;
+-    context->base.loseCurrent = __glXDRIcontextLoseCurrent;
+-    context->base.copy = __glXDRIcontextCopy;
+-    context->base.bindTexImage = __glXDRIbindTexImage;
+-    context->base.releaseTexImage = __glXDRIreleaseTexImage;
+-
+-    context->driContext =
+-        (*core->createNewContext) (screen->driScreen, driConfig, driShare,
+-                                   context);
+-
+-    return &context->base;
+-}
+-
+-static __GLXdrawable *
+-__glXDRIscreenCreateDrawable(ClientPtr client,
+-                             __GLXscreen * screen,
+-                             DrawablePtr pDraw,
+-                             XID drawId,
+-                             int type, XID glxDrawId, __GLXconfig * glxConfig)
+-{
+-    __GLXDRIscreen *driScreen = (__GLXDRIscreen *) screen;
+-    __GLXDRIconfig *config = (__GLXDRIconfig *) glxConfig;
+-    __GLXDRIdrawable *private;
+-
+-    private = calloc(1, sizeof *private);
+-    if (private == NULL)
+-        return NULL;
+-
+-    private->screen = driScreen;
+-    if (!__glXDrawableInit(&private->base, screen,
+-                           pDraw, type, glxDrawId, glxConfig)) {
+-        free(private);
+-        return NULL;
+-    }
+-
+-    private->base.destroy = __glXDRIdrawableDestroy;
+-    private->base.swapBuffers = __glXDRIdrawableSwapBuffers;
+-    private->base.copySubBuffer = __glXDRIdrawableCopySubBuffer;
+-
+-    private->driDrawable =
+-        (*driScreen->swrast->createNewDrawable) (driScreen->driScreen,
+-                                                 config->driConfig, private);
+-
+-    return &private->base;
+-}
+-
+-static void
+-swrastGetDrawableInfo(__DRIdrawable * draw,
+-                      int *x, int *y, int *w, int *h, void *loaderPrivate)
+-{
+-    __GLXDRIdrawable *drawable = loaderPrivate;
+-    DrawablePtr pDraw = drawable->base.pDraw;
+-
+-    *x = pDraw->x;
+-    *y = pDraw->y;
+-    *w = pDraw->width;
+-    *h = pDraw->height;
+-}
+-
+-static void
+-swrastPutImage(__DRIdrawable * draw, int op,
+-               int x, int y, int w, int h, char *data, void *loaderPrivate)
+-{
+-    __GLXDRIdrawable *drawable = loaderPrivate;
+-    DrawablePtr pDraw = drawable->base.pDraw;
+-    GCPtr gc;
+-    __GLXcontext *cx = lastGLContext;
+-
+-    if ((gc = GetScratchGC(pDraw->depth, pDraw->pScreen))) {
+-        ValidateGC(pDraw, gc);
+-        gc->ops->PutImage(pDraw, gc, pDraw->depth, x, y, w, h, 0, ZPixmap,
+-                          data);
+-        FreeScratchGC(gc);
+-    }
+-
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-}
+-
+-static void
+-swrastGetImage(__DRIdrawable * draw,
+-               int x, int y, int w, int h, char *data, void *loaderPrivate)
+-{
+-    __GLXDRIdrawable *drawable = loaderPrivate;
+-    DrawablePtr pDraw = drawable->base.pDraw;
+-    ScreenPtr pScreen = pDraw->pScreen;
+-    __GLXcontext *cx = lastGLContext;
+-
+-    pScreen->SourceValidate(pDraw, x, y, w, h, IncludeInferiors);
+-    pScreen->GetImage(pDraw, x, y, w, h, ZPixmap, ~0L, data);
+-    if (cx != lastGLContext) {
+-        lastGLContext = cx;
+-        cx->makeCurrent(cx);
+-    }
+-}
+-
+-static const __DRIswrastLoaderExtension swrastLoaderExtension = {
+-    {__DRI_SWRAST_LOADER, 1},
+-    swrastGetDrawableInfo,
+-    swrastPutImage,
+-    swrastGetImage
+-};
+-
+-static const __DRIextension *loader_extensions[] = {
+-    &swrastLoaderExtension.base,
+-    NULL
+-};
+-
+-static void
+-initializeExtensions(__GLXscreen * screen)
+-{
+-    const __DRIextension **extensions;
+-    __GLXDRIscreen *dri = (__GLXDRIscreen *)screen;
+-    int i;
+-
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_MESA_copy_sub_buffer");
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_no_config_context");
+-
+-    if (dri->swrast->base.version >= 3) {
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_ARB_create_context");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_ARB_create_context_no_error");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_ARB_create_context_profile");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_EXT_create_context_es_profile");
+-        __glXEnableExtension(screen->glx_enable_bits,
+-                             "GLX_EXT_create_context_es2_profile");
+-    }
+-
+-    /* these are harmless to enable unconditionally */
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_framebuffer_sRGB");
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_ARB_fbconfig_float");
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_fbconfig_packed_float");
+-    __glXEnableExtension(screen->glx_enable_bits, "GLX_EXT_texture_from_pixmap");
+-
+-    extensions = dri->core->getExtensions(dri->driScreen);
+-
+-    for (i = 0; extensions[i]; i++) {
+-        if (strcmp(extensions[i]->name, __DRI_COPY_SUB_BUFFER) == 0) {
+-            dri->copySubBuffer =
+-                (const __DRIcopySubBufferExtension *) extensions[i];
+-        }
+-
+-        if (strcmp(extensions[i]->name, __DRI_TEX_BUFFER) == 0) {
+-            dri->texBuffer = (const __DRItexBufferExtension *) extensions[i];
+-        }
+-
+-#ifdef __DRI2_FLUSH_CONTROL
+-        if (strcmp(extensions[i]->name, __DRI2_FLUSH_CONTROL) == 0) {
+-            __glXEnableExtension(screen->glx_enable_bits,
+-                                 "GLX_ARB_context_flush_control");
+-        }
+-#endif
+-
+-    }
+-}
+-
+-static void
+-__glXDRIscreenDestroy(__GLXscreen * baseScreen)
+-{
+-    int i;
+-
+-    __GLXDRIscreen *screen = (__GLXDRIscreen *) baseScreen;
+-
+-    (*screen->core->destroyScreen) (screen->driScreen);
+-
+-    dlclose(screen->driver);
+-
+-    __glXScreenDestroy(baseScreen);
+-
+-    if (screen->driConfigs) {
+-        for (i = 0; screen->driConfigs[i] != NULL; i++)
+-            free((__DRIconfig **) screen->driConfigs[i]);
+-        free(screen->driConfigs);
+-    }
+-
+-    free(screen);
+-}
+-
+-static __GLXscreen *
+-__glXDRIscreenProbe(ScreenPtr pScreen)
+-{
+-    const char *driverName = "swrast";
+-    __GLXDRIscreen *screen;
+-
+-    screen = calloc(1, sizeof *screen);
+-    if (screen == NULL)
+-        return NULL;
+-
+-    screen->base.destroy = __glXDRIscreenDestroy;
+-    screen->base.createContext = __glXDRIscreenCreateContext;
+-    screen->base.createDrawable = __glXDRIscreenCreateDrawable;
+-    screen->base.swapInterval = NULL;
+-    screen->base.pScreen = pScreen;
+-
+-    __glXInitExtensionEnableBits(screen->base.glx_enable_bits);
+-
+-    screen->driver = glxProbeDriver(driverName,
+-                                    (void **) &screen->core,
+-                                    __DRI_CORE, 1,
+-                                    (void **) &screen->swrast,
+-                                    __DRI_SWRAST, 1);
+-    if (screen->driver == NULL) {
+-        goto handle_error;
+-    }
+-
+-    screen->driScreen =
+-        (*screen->swrast->createNewScreen) (pScreen->myNum,
+-                                            loader_extensions,
+-                                            &screen->driConfigs, screen);
+-
+-    if (screen->driScreen == NULL) {
+-        LogMessage(X_ERROR, "IGLX error: Calling driver entry point failed\n");
+-        goto handle_error;
+-    }
+-
+-    initializeExtensions(&screen->base);
+-
+-    screen->base.fbconfigs = glxConvertConfigs(screen->core,
+-                                               screen->driConfigs);
+-
+-#if !defined(XQUARTZ) && !defined(WIN32)
+-    screen->base.glvnd = strdup("mesa");
+-#endif
+-    __glXScreenInit(&screen->base, pScreen);
+-
+-    __glXsetGetProcAddress(glXGetProcAddressARB);
+-
+-    LogMessage(X_INFO, "IGLX: Loaded and initialized %s\n", driverName);
+-
+-    return &screen->base;
+-
+- handle_error:
+-    if (screen->driver)
+-        dlclose(screen->driver);
+-
+-    free(screen);
+-
+-    LogMessage(X_ERROR, "GLX: could not load software renderer\n");
+-
+-    return NULL;
+-}
+-
+-__GLXprovider __glXDRISWRastProvider = {
+-    __glXDRIscreenProbe,
+-    "DRISWRAST",
+-    NULL
+-};
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/glxext.c xwayland-24.1.11/glx/glxext.c
+--- xwayland-24.1.11.orig/glx/glxext.c	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/glx/glxext.c	2026-05-03 15:29:06.778128354 -0600
+@@ -271,7 +271,12 @@ glxClientCallback(CallbackListPtr *list,
+ 
+ /************************************************************************/
+ 
+-static __GLXprovider *__glXProviderStack = &__glXDRISWRastProvider;
++static __GLXprovider *__glXProviderStack =
++#ifdef BUILD_GLX_DRI
++    &__glXDRISWRastProvider;
++#else
++    NULL;
++#endif
+ 
+ void
+ GlxPushProvider(__GLXprovider * provider)
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/glx/meson.build xwayland-24.1.11/glx/meson.build
+--- xwayland-24.1.11.orig/glx/meson.build	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/glx/meson.build	2026-05-03 15:30:29.692758236 -0600
+@@ -13,8 +13,6 @@ srcs_glx = [
+     'glxcmds.c',
+     'glxcmdsswap.c',
+     'glxext.c',
+-    'glxdriswrast.c',
+-    'glxdricommon.c',
+     'glxscreens.c',
+     'render2.c',
+     'render2swap.c',
+@@ -30,6 +28,16 @@ srcs_glx = [
+     'xfont.c',
+ ]
+ 
++srcs_glxdri2 = []
++if build_glx_dri
++    srcs_glx += 'glx_dri/glxdriswrast.c'
++    srcs_glx += 'glx_dri/glxdricommon.c'
++
++    if build_dri2 or build_dri3
++        srcs_glxdri2 = files('glx_dri/glxdri2.c')
++    endif
++endif
++
+ libxserver_glx = []
+ if build_glx
+     libxserver_glx = static_library('libxserver_glx',
+@@ -50,11 +58,6 @@ if build_glx
+     )
+ endif
+ 
+-srcs_glxdri2 = []
+-if build_dri3
+-    srcs_glxdri2 = files('glxdri2.c')
+-endif
+-
+ srcs_vnd = [
+     'vndcmds.c',
+     'vndext.c',
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/include/meson.build xwayland-24.1.11/include/meson.build
+--- xwayland-24.1.11.orig/include/meson.build	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/include/meson.build	2026-05-03 15:31:32.689337519 -0600
+@@ -6,8 +6,6 @@ patch = version_split[2].to_int()
+ # convert to the old-style 1.x.y version scheme used up to 1.20.x for backwards compatibility
+ release = 1 * 10000000 + major * 100000 + minor * 1000 + patch
+ 
+-dri_dep = dependency('dri', required: build_glx)
+-
+ conf_data = configuration_data()
+ conf_data.set('_DIX_CONFIG_H_', '1')
+ 
+@@ -204,7 +202,10 @@ conf_data.set('DBE', '1')
+ conf_data.set('DPMSExtension', build_dpms ? '1' : false)
+ conf_data.set('DRI3', build_dri3 ? '1' : false)
+ if build_glx
+-    conf_data.set_quoted('DRI_DRIVER_PATH', dri_dep.get_variable(pkgconfig : 'dridriverdir'))
++    if build_glx_dri
++        conf_data.set_quoted('DRI_DRIVER_PATH', dri_dep.get_variable(pkgconfig : 'dridriverdir'))
++        conf_data.set('BUILD_GLX_DRI', 1)
++    endif
+ endif
+ conf_data.set('MITSHM', build_mitshm ? '1' : false)
+ conf_data.set('PANORAMIX', build_xinerama ? '1' : false)
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/meson.build xwayland-24.1.11/meson.build
+--- xwayland-24.1.11.orig/meson.build	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/meson.build	2026-05-03 15:32:29.251246702 -0600
+@@ -330,6 +330,20 @@ if build_glx
+     build_hashtable = true
+ endif
+ 
++dri_dep = dependency('dri', required: false)
++
++glx_dri_opt = get_option('glx_dri')
++build_glx_dri = (glx_dri_opt != 'false')
++if not dri_dep.found()
++    if glx_dri_opt == 'auto'
++        build_glx_dri = false
++    endif
++
++    if glx_dri_opt == 'true'
++        error('DRI glx backends requested, but dependency dri was not found')
++    endif
++endif
++
+ libdrm_dep = dependency('libdrm', version: libdrm_req, required: false)
+ 
+ if host_machine.system() in ['freebsd', 'openbsd']
+diff '--color=auto' -Naurp xwayland-24.1.11.orig/meson_options.txt xwayland-24.1.11/meson_options.txt
+--- xwayland-24.1.11.orig/meson_options.txt	2026-04-27 01:25:48.000000000 -0600
++++ xwayland-24.1.11/meson_options.txt	2026-05-03 15:32:54.646845624 -0600
+@@ -15,6 +15,8 @@ option('serverconfigdir', type: 'string'
+         description: 'Miscellaneous server configuration files path. Default: $libdir/xorg')
+ 
+ option('glx', type: 'boolean', value: true)
++option('glx_dri', type: 'combo', choices: ['true', 'false', 'auto'], value: 'auto',
++       description: 'Build the dri-based glx backends.')
+ option('xdmcp', type: 'boolean', value: true)
+ option('xdm-auth-1', type: 'boolean', value: true)
+ option('secure-rpc', type: 'boolean', value: true)

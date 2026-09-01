@@ -4,7 +4,6 @@
 # 2025-06-14
 
 MANIFEST_VERSION=2
-OPENCL_VERSION="1.0.0"
 NVVM70_VERSION="4"
 MANDATORY_64=1 MANDATORY_32=1
 X11_64=1 X11_32=1
@@ -138,26 +137,44 @@ if [ $MANIFEST_FILE_VERSION != $MANIFEST_VERSION ]; then
 fi
 
 manifest_uninstall() {
-  for type in {mandatory-64,mandatory-32,x11-64,x11-32,egl-64,egl-32,glesv1-64,glesv1-32,glesv2-64,glesv2-32,opencl-64,opencl-32,cuda-64,cuda-32,ngx,rt,settings}; do
-    for bin in $(cat $NV_MANIFEST | grep $type | cut -d':' -f2-); do
-      find $LIBDIR $LIB32 $BINDIR -name "$bin.so*" -exec $RM_BIN {} \;
-      find $LIBDIR $LIB32 $BINDIR -name "$bin" -exec $RM_BIN {} \;
-    done
+  set --
+  first=1
+  while IFS=: read -r type bin; do
+    case $type in mandatory-64|mandatory-32|x11-64|x11-32|egl-64|egl-32|glesv1-64|glesv1-32|glesv2-64|glesv2-32|opencl-64|opencl-32|cuda-64|cuda-32|ngx|rt|settings)
+      for individual in $bin; do
+        if [ $first -eq 0 ]; then
+          set -- "$@" -o
+        fi
+        set -- "$@" -name "$individual" -o -name "$individual.so*"
+        first=0
+      done
+    ;;
+    esac
+  done < $NV_MANIFEST
+
+  set -- "$@"                  \
+    -name "nvidia-drm_gbm"  -o \
+    -name "nvidia-modprobe" -o \
+    -name "nvidia-settings" -o \
+    -name "nvidia-xconfig"  -o \
+    -name "nvidia-smi"
+
+  dirs=
+
+  for DIRECTORY in $LIBDIR $LIB32 $BINDIR; do
+    [ -d $DIRECTORY ] && dirs="$dirs $DIRECTORY"
   done
-  find $LIBDIR $LIB32 $BINDIR -name "nvidia-drm_gbm" -exec $RM_BIN {} \;
-  find $LIBDIR $LIB32 $BINDIR -name "nvidia-modprobe" -exec $RM_BIN {} \;
-  find $SHAREDIR -name "nvidia-application-profiles*" -exec $RM_BIN {} \;
-  find $XEXT -name "libglxserver_nvidia.so*" -exec $RM_BIN {} \;
-  find $XEXT -name "nvidia_drv.so*" -exec $RM_BIN {} \;
-  find $EGLGLVNDDIR -name "*_nvidia.json" -exec $RM_BIN {} \;
-  find $VKICDDIR -name "*nvidia*.json" -exec $RM_BIN {} \;
-  find $NVWINEDIR -name "*nvngx*.dll" -exec $RM_BIN {} \;
-  find $SHAREDIR/nvidia -name "*nvoptix*" -exec $RM_BIN {} \;
-  find $BINDIR -name "nvidia-settings" -exec $RM_BIN {} \;
-  find $SHAREDIR/applications -name "nvidia-settings.desktop" -exec $RM_BIN {} \;
-  find $SHAREDIR/pixmaps -name "nvidia-settings.png" -exec $RM_BIN {} \;
-  find $BINDIR -name "nvidia-xconfig" -exec $RM_BIN {} \;
-  find $BINDIR -name "nvidia-smi" -exec $RM_BIN {} \;
+
+  find $dirs \( $@ \) -print -delete
+  [ -d $SHAREDIR ] && find $SHAREDIR -name "nvidia-application-profiles*" -exec $RM_BIN {} \;
+  [ -d $XEXT ] && find $XEXT -name "libglxserver_nvidia.so*" -exec $RM_BIN {} \;
+  [ -d $XEXT ] && find $XEXT -name "nvidia_drv.so*" -exec $RM_BIN {} \;
+  [ -d $EGLGLVNDDIR ] && find $EGLGLVNDDIR -name "*_nvidia.json" -exec $RM_BIN {} \;
+  [ -d $VKICDDIR ] && find $VKICDDIR -name "*nvidia*.json" -exec $RM_BIN {} \;
+  [ -d $NVWINEDIR ] && find $NVWINEDIR -name "*nvngx*.dll" -exec $RM_BIN {} \;
+  [ -d $SHAREDIR/nvidia ] && find $SHAREDIR/nvidia -name "*nvoptix*" -exec $RM_BIN {} \;
+  [ -d $SHAREDIR/applications ] && find $SHAREDIR/applications -name "nvidia-settings.desktop" -exec $RM_BIN {} \;
+  [ -d $SHAREDIR/pixmaps ] && find $SHAREDIR/pixmaps -name "nvidia-settings.png" -exec $RM_BIN {} \;
   $RM_BIN $DOCDIR/nvidia*
 }
 
@@ -167,7 +184,7 @@ file_uninstall() {
   done
 }
 
-if ls /usr/lib/libnvidia-cfg.so* 1> /dev/null 2>&1; then
+if ls $LIBDIR/libnvidia-cfg.so* 1> /dev/null 2>&1; then
   echo "Uninstalling previously installed NVIDIA drivers..."
   if [ -f $SHAREDIR/nvidia/installed_files ]; then
     file_uninstall
@@ -388,33 +405,55 @@ else
   # a DESTDIR. ldconfig will then make symlinks in $LIBDIR and $LIB32.
   # ldconfig should still be ran after installing from that distribution to
   # build the library cache.
-  /sbin/ldconfig -n $LIBDIR $LIB32
+  for DIRECTORY in $LIBDIR $LIB32; do
+    [ -d $DIRECTORY ] && /sbin/ldconfig -n $DIRECTORY
+  done
 fi
 
 echo "Writing to $SHAREDIR/nvidia/installed_files..."
 mkdir -pv $SHAREDIR/nvidia
-for type in {mandatory-64,mandatory-32,x11-64,x11-32,egl-64,egl-32,glesv1-64,glesv1-32,glesv2-64,glesv2-32,opencl-64,opencl-32,cuda-64,cuda-32,ngx,rt,settings}; do
-  for bin in $(cat $NV_MANIFEST | grep $type | cut -d':' -f2-); do
-    find $LIBDIR $LIB32 $BINDIR -name "$bin.so*" >> $SHAREDIR/nvidia/installed_files1
-    find $LIBDIR $LIB32 $BINDIR -name "$bin" >> $SHAREDIR/nvidia/installed_files1
-  done
+
+set --
+first=1
+while IFS=: read -r type bin; do
+  case $type in mandatory-64|mandatory-32|x11-64|x11-32|egl-64|egl-32|glesv1-64|glesv1-32|glesv2-64|glesv2-32|opencl-64|opencl-32|cuda-64|cuda-32|ngx|rt|settings)
+    for individual in $bin; do
+      if [ $first -eq 0 ]; then
+        set -- "$@" -o
+      fi
+      set -- "$@" -name "$individual" -o -name "$individual.so*"
+      first=0
+    done
+  ;;
+  esac
+done < $NV_MANIFEST
+
+set -- "$@"                  \
+  -name "nvidia-drm_gbm"  -o \
+  -name "nvidia-modprobe" -o \
+  -name "nvidia-settings" -o \
+  -name "nvidia-xconfig"  -o \
+  -name "nvidia-smi"
+
+dirs=
+
+for DIRECTORY in $LIBDIR $LIB32 $BINDIR; do
+  [ -d $DIRECTORY ] && dirs="$dirs $DIRECTORY"
 done
-find $LIBDIR $LIB32 $BINDIR -name "nvidia-drm_gbm" >> $SHAREDIR/nvidia/installed_files1
-find $LIBDIR $LIB32 $BINDIR -name "nvidia-modprobe" >> $SHAREDIR/nvidia/installed_files1
-find $SHAREDIR -name "nvidia-application-profiles*" >> $SHAREDIR/nvidia/installed_files1
-find $XEXT -name "libglxserver_nvidia.so*" >> $SHAREDIR/nvidia/installed_files1
-find $XEXT -name "nvidia_drv.so*" >> $SHAREDIR/nvidia/installed_files1
-find $EGLGLVNDDIR -name "*_nvidia.json" >> $SHAREDIR/nvidia/installed_files1
-find $VKICDDIR -name "*nvidia*.json" >> $SHAREDIR/nvidia/installed_files1
-find $OPENCLICDDIR -name "*nvidia*.icd" >> $SHAREDIR/nvidia/installed_files1
-find $NVWINEDIR -name "*nvngx*.dll" >> $SHAREDIR/nvidia/installed_files1
-find $SHAREDIR/nvidia -name "*nvoptix*" >> $SHAREDIR/nvidia/installed_files1
-find $BINDIR -name "nvidia-settings" >> $SHAREDIR/nvidia/installed_files1
-find $SHAREDIR/applications -name "nvidia-settings.desktop" >> $SHAREDIR/nvidia/installed_files1
-find $SHAREDIR/pixmaps -name "nvidia-settings.png" >> $SHAREDIR/nvidia/installed_files1
-find $BINDIR -name "nvidia-xconfig" >> $SHAREDIR/nvidia/installed_files1
-find $BINDIR -name "nvidia-smi" >> $SHAREDIR/nvidia/installed_files1
-find $DOCDIR/nvidia* >> $SHAREDIR/nvidia/installed_files1
+
+find $dirs \( $@ \) >> $SHAREDIR/nvidia/installed_files1
+
+[ -d $SHAREDIR ] && find $SHAREDIR -name "nvidia-application-profiles*" >> $SHAREDIR/nvidia/installed_files1
+[ -d $XEXT ] && find $XEXT -name "libglxserver_nvidia.so*" >> $SHAREDIR/nvidia/installed_files1
+[ -d $XEXT ] && find $XEXT -name "nvidia_drv.so*" >> $SHAREDIR/nvidia/installed_files1
+[ -d $EGLGLVNDDIR ] && find $EGLGLVNDDIR -name "*_nvidia.json" >> $SHAREDIR/nvidia/installed_files1
+[ -d $VKICDDIR ] && find $VKICDDIR -name "*nvidia*.json" >> $SHAREDIR/nvidia/installed_files1
+[ -d $NVWINEDIR ] && find $NVWINEDIR -name "*nvngx*.dll" >> $SHAREDIR/nvidia/installed_files1
+[ -d $SHAREDIR/nvidia ] && find $SHAREDIR/nvidia -name "*nvoptix*" >> $SHAREDIR/nvidia/installed_files1
+[ -d $SHAREDIR/applications ] && find $SHAREDIR/applications -name "nvidia-settings.desktop" >> $SHAREDIR/nvidia/installed_files1
+[ -d $SHAREDIR/pixmaps ] && find $SHAREDIR/pixmaps -name "nvidia-settings.png" >> $SHAREDIR/nvidia/installed_files1
+[ -d $DOCDIR ] && find $DOCDIR/nvidia* >> $SHAREDIR/nvidia/installed_files1
+
 cat $SHAREDIR/nvidia/installed_files1 | sort > $SHAREDIR/nvidia/installed_files
 rm -f $SHAREDIR/nvidia/installed_files1
 

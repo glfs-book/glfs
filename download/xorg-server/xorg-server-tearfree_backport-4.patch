@@ -1,0 +1,1467 @@
+Submitted By:            Rahul Chandra <rahulshaku2_at_gmail_dot_com>
+Updated By:              Douglas R. Reno <renodr at linuxfromscratch dot org>
+Updated By:              Bruce Dubbs <bdubbs at linuxfromscratch dot org>
+Updated By:              Joe jlocash <jlocash at gmail dot org>
+Date:                    2023-07-20
+Updated Date:            2024-01-17
+Updated Date:            2025-02-25
+Updated Date:            2026-04-14
+Initial Package Version: 21.1.8
+Updated Package Version: 21.1.11
+Updated Package Version: 21.1.16
+Updated Package Version: 21.1.22
+Upstream Status:         In Master
+Origin:                  Master Gitlab
+Description:             Backport of the TearFree option from Xorg master
+Description (Update):    Removed the hunk for meson.build since it has been
+                         applied in 21.1.11.
+Description (Update2):   Make patch acceptable to gcc-14.
+Description (Update3):   Reworked to work with xorg-server-21.1.16. This was
+                         very difficult because the commits needed were not
+                         documented in the patch. For future reference, we will
+                         need to pull:
+                         a94dd95369941471774cc78d22474db95fc4bb50
+                         6ac3178c335d82eb2948fac1092807ab387a83b9
+                         18b14ea1f68b0acac4bfb48d51e749db4ec417e4
+                         53b02054f36a49bd45e954f0eef1029152af78b7
+                         And then do a variety of backports to pixmap.c and
+                         present.c.
+
+diff -Naurp xorg-server-21.1.16.orig/dix/pixmap.c xorg-server-21.1.16/dix/pixmap.c
+--- xorg-server-21.1.16.orig/dix/pixmap.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/dix/pixmap.c	2025-02-25 15:27:25.810491425 -0600
+@@ -262,12 +262,11 @@ PixmapStopDirtyTracking(DrawablePtr src,
+     return TRUE;
+ }
+ 
+-static void
+-PixmapDirtyCopyArea(PixmapPtr dst,
+-                    PixmapDirtyUpdatePtr dirty,
++void
++PixmapDirtyCopyArea(PixmapPtr dst, DrawablePtr src,
++                    int x, int y, int dst_x, int dst_y,
+                     RegionPtr dirty_region)
+ {
+-    DrawablePtr src = dirty->src;
+     ScreenPtr pScreen = src->pScreen;
+     int n;
+     BoxPtr b;
+@@ -294,9 +293,9 @@ PixmapDirtyCopyArea(PixmapPtr dst,
+         h = dst_box.y2 - dst_box.y1;
+ 
+         pGC->ops->CopyArea(src, &dst->drawable, pGC,
+-                           dirty->x + dst_box.x1, dirty->y + dst_box.y1, w, h,
+-                           dirty->dst_x + dst_box.x1,
+-                           dirty->dst_y + dst_box.y1);
++                           x + dst_box.x1, y + dst_box.y1, w, h,
++                           dst_x + dst_box.x1,
++                           dst_y + dst_box.y1);
+         b++;
+     }
+     FreeScratchGC(pGC);
+@@ -408,7 +407,8 @@ Bool PixmapSyncDirtyHelper(PixmapDirtyUp
+     RegionTranslate(&pixregion, -dirty->x, -dirty->y);
+ 
+     if (!pScreen->root || dirty->rotation == RR_Rotate_0)
+-        PixmapDirtyCopyArea(dst, dirty, &pixregion);
++        PixmapDirtyCopyArea(dst, dirty->src, dirty->x, dirty->y,
++                            dirty->dst_x, dirty->dst_y, &pixregion);
+     else
+         PixmapDirtyCompositeRotate(dst, dirty, &pixregion);
+     pScreen->SourceValidate = SourceValidate;
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/dri2.c xorg-server-21.1.16/hw/xfree86/drivers/modesetting/dri2.c
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/dri2.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/dri2.c	2025-02-25 16:43:47.869286831 -0600
+@@ -483,7 +483,7 @@ ms_dri2_schedule_flip(ms_dri2_frame_even
+     modesettingPtr ms = modesettingPTR(scrn);
+     ms_dri2_buffer_private_ptr back_priv = info->back->driverPrivate;
+     struct ms_dri2_vblank_event *event;
+-    drmmode_crtc_private_ptr drmmode_crtc = info->crtc->driver_private;
++    //drmmode_crtc_private_ptr drmmode_crtc = info->crtc->driver_private;
+ 
+     event = calloc(1, sizeof(struct ms_dri2_vblank_event));
+     if (!event)
+@@ -495,7 +495,7 @@ ms_dri2_schedule_flip(ms_dri2_frame_even
+     event->event_data = info->event_data;
+ 
+     if (ms_do_pageflip(screen, back_priv->pixmap, event,
+-                       drmmode_crtc->vblank_pipe, FALSE,
++                       info->crtc, FALSE,
+                        ms_dri2_flip_handler,
+                        ms_dri2_flip_abort,
+                        "DRI2-flip")) {
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/driver.c xorg-server-21.1.16/hw/xfree86/drivers/modesetting/driver.c
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/driver.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/driver.c	2025-02-25 14:59:37.446900463 -0600
+@@ -145,6 +145,7 @@ static const OptionInfoRec Options[] = {
+     {OPTION_VARIABLE_REFRESH, "VariableRefresh", OPTV_BOOLEAN, {0}, FALSE},
+     {OPTION_USE_GAMMA_LUT, "UseGammaLUT", OPTV_BOOLEAN, {0}, FALSE},
+     {OPTION_ASYNC_FLIP_SECONDARIES, "AsyncFlipSecondaries", OPTV_BOOLEAN, {0}, FALSE},
++    {OPTION_TEARFREE, "TearFree", OPTV_BOOLEAN, {0}, FALSE},
+     {-1, NULL, OPTV_NONE, {0}, FALSE}
+ };
+ 
+@@ -548,14 +549,16 @@ rotate_clip(PixmapPtr pixmap, BoxPtr rec
+ }
+ 
+ static int
+-dispatch_dirty_region(ScrnInfoPtr scrn, xf86CrtcPtr crtc,
+-		      PixmapPtr pixmap, DamagePtr damage, int fb_id)
++dispatch_damages(ScrnInfoPtr scrn, xf86CrtcPtr crtc, RegionPtr dirty,
++                 PixmapPtr pixmap, DamagePtr damage, int fb_id)
+ {
+     modesettingPtr ms = modesettingPTR(scrn);
+-    RegionPtr dirty = DamageRegion(damage);
+     unsigned num_cliprects = REGION_NUM_RECTS(dirty);
+     int ret = 0;
+ 
++    if (!ms->dirty_enabled)
++        return 0;
++
+     if (num_cliprects) {
+         drmModeClip *clip = xallocarray(num_cliprects, sizeof(drmModeClip));
+         BoxPtr rect = REGION_RECTS(dirty);
+@@ -579,12 +582,104 @@ dispatch_dirty_region(ScrnInfoPtr scrn,
+             }
+         }
+ 
++        if (ret == -EINVAL || ret == -ENOSYS) {
++            xf86DrvMsg(scrn->scrnIndex, X_INFO,
++                       "Disabling kernel dirty updates, not required.\n");
++            ms->dirty_enabled = FALSE;
++        }
++
+         free(clip);
+-        DamageEmpty(damage);
++        if (damage)
++            DamageEmpty(damage);
+     }
+     return ret;
+ }
+ 
++static int
++dispatch_dirty_region(ScrnInfoPtr scrn, xf86CrtcPtr crtc,
++                      PixmapPtr pixmap, DamagePtr damage, int fb_id)
++{
++    return dispatch_damages(scrn, crtc, DamageRegion(damage),
++                            pixmap, damage, fb_id);
++}
++
++static void
++ms_tearfree_update_damages(ScreenPtr pScreen)
++{
++    ScrnInfoPtr scrn = xf86ScreenToScrn(pScreen);
++    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
++    modesettingPtr ms = modesettingPTR(scrn);
++    RegionPtr dirty = DamageRegion(ms->damage);
++    int c, i;
++
++    if (RegionNil(dirty))
++        return;
++
++    for (c = 0; c < xf86_config->num_crtc; c++) {
++        xf86CrtcPtr crtc = xf86_config->crtc[c];
++        drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++        drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++        RegionRec region;
++
++        /* Compute how much of the damage intersects with this CRTC */
++        RegionInit(&region, &crtc->bounds, 0);
++        RegionIntersect(&region, &region, dirty);
++
++        if (trf->buf[0].px) {
++            for (i = 0; i < ARRAY_SIZE(trf->buf); i++)
++                RegionUnion(&trf->buf[i].dmg, &trf->buf[i].dmg, &region);
++        } else {
++            /* Just notify the kernel of the damages if TearFree isn't used */
++            dispatch_damages(scrn, crtc, &region,
++                             pScreen->GetScreenPixmap(pScreen),
++                             NULL, ms->drmmode.fb_id);
++        }
++    }
++    DamageEmpty(ms->damage);
++}
++
++static void
++ms_tearfree_do_flips(ScreenPtr pScreen)
++{
++#ifdef GLAMOR_HAS_GBM
++    ScrnInfoPtr scrn = xf86ScreenToScrn(pScreen);
++    xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
++    modesettingPtr ms = modesettingPTR(scrn);
++    int c;
++
++    if (!ms->drmmode.tearfree_enable)
++        return;
++
++    for (c = 0; c < xf86_config->num_crtc; c++) {
++        xf86CrtcPtr crtc = xf86_config->crtc[c];
++        drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++        drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++
++        if (!ms_tearfree_is_active_on_crtc(crtc)) {
++            /* Notify any lingering DRI clients waiting for a flip to finish */
++            ms_tearfree_dri_abort_all(crtc);
++            continue;
++        }
++
++        /* Skip if the last flip is still pending, a DRI client is flipping, or
++         * there isn't any damage on the front buffer.
++         */
++        if (trf->flip_seq || ms->drmmode.dri2_flipping ||
++            ms->drmmode.present_flipping ||
++            RegionNil(&trf->buf[trf->back_idx ^ 1].dmg))
++            continue;
++
++        /* Flip. If it fails, notify the kernel of the front buffer damages */
++        if (ms_do_tearfree_flip(pScreen, crtc)) {
++            dispatch_damages(scrn, crtc, &trf->buf[trf->back_idx ^ 1].dmg,
++                             trf->buf[trf->back_idx ^ 1].px, NULL,
++                             trf->buf[trf->back_idx ^ 1].fb_id);
++            RegionEmpty(&trf->buf[trf->back_idx ^ 1].dmg);
++        }
++    }
++#endif
++}
++
+ static void
+ dispatch_dirty(ScreenPtr pScreen)
+ {
+@@ -606,12 +701,9 @@ dispatch_dirty(ScreenPtr pScreen)
+ 
+         ret = dispatch_dirty_region(scrn, crtc, pixmap, ms->damage, fb_id);
+         if (ret == -EINVAL || ret == -ENOSYS) {
+-            ms->dirty_enabled = FALSE;
+             DamageUnregister(ms->damage);
+             DamageDestroy(ms->damage);
+             ms->damage = NULL;
+-            xf86DrvMsg(scrn->scrnIndex, X_INFO,
+-                       "Disabling kernel dirty updates, not required.\n");
+             return;
+         }
+     }
+@@ -742,10 +834,13 @@ msBlockHandler(ScreenPtr pScreen, void *
+     pScreen->BlockHandler = msBlockHandler;
+     if (pScreen->isGPU && !ms->drmmode.reverse_prime_offload_mode)
+         dispatch_secondary_dirty(pScreen);
++    else if (ms->drmmode.tearfree_enable)
++        ms_tearfree_update_damages(pScreen);
+     else if (ms->dirty_enabled)
+         dispatch_dirty(pScreen);
+ 
+     ms_dirty_update(pScreen, timeout);
++    ms_tearfree_do_flips(pScreen);
+ }
+ 
+ static void
+@@ -1277,9 +1372,34 @@ PreInit(ScrnInfoPtr pScrn, int flags)
+     if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_ATOMIC, FALSE)) {
+         ret = drmSetClientCap(ms->fd, DRM_CLIENT_CAP_ATOMIC, 1);
+         ms->atomic_modeset = (ret == 0);
++        if (!ms->atomic_modeset)
++            xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "Atomic modesetting not supported\n");
+     } else {
+         ms->atomic_modeset = FALSE;
+     }
++    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
++               "Atomic modesetting %sabled\n", ms->atomic_modeset ? "en" : "dis");
++
++    /* TearFree requires glamor and, if PageFlip is enabled, universal planes */
++    if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_TEARFREE, FALSE)) {
++        if (pScrn->is_gpu) {
++            xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
++                       "TearFree cannot synchronize PRIME; use 'PRIME Synchronization' instead\n");
++        } else if (ms->drmmode.glamor) {
++            /* Atomic modesetting implicitly enables universal planes */
++            if (!ms->drmmode.pageflip || ms->atomic_modeset ||
++                !drmSetClientCap(ms->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) {
++                ms->drmmode.tearfree_enable = TRUE;
++                xf86DrvMsg(pScrn->scrnIndex, X_INFO, "TearFree: enabled\n");
++            } else {
++                xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
++                           "TearFree requires either universal planes, or setting 'Option \"PageFlip\" \"off\"'\n");
++            }
++        } else {
++            xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
++                       "TearFree requires Glamor acceleration\n");
++        }
++    }
+ 
+     ms->kms_has_modifiers = FALSE;
+     ret = drmGetCap(ms->fd, DRM_CAP_ADDFB2_MODIFIERS, &value);
+@@ -1628,13 +1748,13 @@ CreateScreenResources(ScreenPtr pScreen)
+ 
+     err = drmModeDirtyFB(ms->fd, ms->drmmode.fb_id, NULL, 0);
+ 
+-    if (err != -EINVAL && err != -ENOSYS) {
++    if ((err != -EINVAL && err != -ENOSYS) || ms->drmmode.tearfree_enable) {
+         ms->damage = DamageCreate(NULL, NULL, DamageReportNone, TRUE,
+                                   pScreen, rootPixmap);
+ 
+         if (ms->damage) {
+             DamageRegister(&rootPixmap->drawable, ms->damage);
+-            ms->dirty_enabled = TRUE;
++            ms->dirty_enabled = err != -EINVAL && err != -ENOSYS;
+             xf86DrvMsg(pScrn->scrnIndex, X_INFO, "Damage tracking initialized\n");
+         }
+         else {
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/driver.h xorg-server-21.1.16/hw/xfree86/drivers/modesetting/driver.h
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/driver.h	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/driver.h	2025-02-25 15:52:07.876035520 -0600
+@@ -61,6 +61,7 @@ typedef enum {
+     OPTION_VARIABLE_REFRESH,
+     OPTION_USE_GAMMA_LUT,
+     OPTION_ASYNC_FLIP_SECONDARIES,
++    OPTION_TEARFREE,
+ } modesettingOpts;
+ 
+ typedef struct
+@@ -86,10 +87,13 @@ struct ms_drm_queue {
+     struct xorg_list list;
+     xf86CrtcPtr crtc;
+     uint32_t seq;
++    uint64_t msc;
+     void *data;
+     ScrnInfoPtr scrn;
+     ms_drm_handler_proc handler;
+     ms_drm_abort_proc abort;
++    Bool kernel_queued;
++    Bool aborted;
+ };
+ 
+ typedef struct _modesettingRec {
+@@ -232,14 +236,25 @@ typedef void (*ms_pageflip_abort_proc)(m
+ Bool ms_do_pageflip(ScreenPtr screen,
+                     PixmapPtr new_front,
+                     void *event,
+-                    int ref_crtc_vblank_pipe,
++                    xf86CrtcPtr ref_crtc,
+                     Bool async,
+                     ms_pageflip_handler_proc pageflip_handler,
+                     ms_pageflip_abort_proc pageflip_abort,
+                     const char *log_prefix);
+ 
++Bool
++ms_tearfree_dri_abort(xf86CrtcPtr crtc,
++                      Bool (*match)(void *data, void *match_data),
++                      void *match_data);
++
++void
++ms_tearfree_dri_abort_all(xf86CrtcPtr crtc);
++
++Bool ms_do_tearfree_flip(ScreenPtr screen, xf86CrtcPtr crtc);
++
+ #endif
+ 
+ int ms_flush_drm_events(ScreenPtr screen);
+ Bool ms_window_has_variable_refresh(modesettingPtr ms, WindowPtr win);
+ void ms_present_set_screen_vrr(ScrnInfoPtr scrn, Bool vrr_enabled);
++Bool ms_tearfree_is_active_on_crtc(xf86CrtcPtr crtc);
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/drmmode_display.c xorg-server-21.1.16/hw/xfree86/drivers/modesetting/drmmode_display.c
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/drmmode_display.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/drmmode_display.c	2025-02-25 16:35:34.934256486 -0600
+@@ -632,6 +632,7 @@ drmmode_crtc_get_fb_id(xf86CrtcPtr crtc,
+ {
+     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+     drmmode_ptr drmmode = drmmode_crtc->drmmode;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
+     int ret;
+ 
+     *fb_id = 0;
+@@ -646,6 +647,10 @@ drmmode_crtc_get_fb_id(xf86CrtcPtr crtc,
+             *x = drmmode_crtc->prime_pixmap_x;
+         *y = 0;
+     }
++    else if (trf->buf[trf->back_idx ^ 1].px) {
++        *fb_id = trf->buf[trf->back_idx ^ 1].fb_id;
++        *x = *y = 0;
++    }
+     else if (drmmode_crtc->rotate_fb_id) {
+         *fb_id = drmmode_crtc->rotate_fb_id;
+         *x = *y = 0;
+@@ -922,6 +927,10 @@ drmmode_crtc_set_mode(xf86CrtcPtr crtc,
+     drmmode_ConvertToKMode(crtc->scrn, &kmode, &crtc->mode);
+     ret = drmModeSetCrtc(drmmode->fd, drmmode_crtc->mode_crtc->crtc_id,
+                          fb_id, x, y, output_ids, output_count, &kmode);
++    if (!ret && !ms->atomic_modeset) {
++        drmmode_crtc->src_x = x;
++        drmmode_crtc->src_y = y;
++    }
+ 
+     drmmode_set_ctm(crtc, ctm);
+ 
+@@ -930,7 +939,8 @@ drmmode_crtc_set_mode(xf86CrtcPtr crtc,
+ }
+ 
+ int
+-drmmode_crtc_flip(xf86CrtcPtr crtc, uint32_t fb_id, uint32_t flags, void *data)
++drmmode_crtc_flip(xf86CrtcPtr crtc, uint32_t fb_id, int x, int y,
++                  uint32_t flags, void *data)
+ {
+     modesettingPtr ms = modesettingPTR(crtc->scrn);
+     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+@@ -942,7 +952,7 @@ drmmode_crtc_flip(xf86CrtcPtr crtc, uint
+         if (!req)
+             return 1;
+ 
+-        ret = plane_add_props(req, crtc, fb_id, crtc->x, crtc->y);
++        ret = plane_add_props(req, crtc, fb_id, x, y);
+         flags |= DRM_MODE_ATOMIC_NONBLOCK;
+         if (ret == 0)
+             ret = drmModeAtomicCommit(ms->fd, req, flags, data);
+@@ -950,6 +960,26 @@ drmmode_crtc_flip(xf86CrtcPtr crtc, uint
+         return ret;
+     }
+ 
++    /* The frame buffer source coordinates may change when switching between the
++     * primary frame buffer and a per-CRTC frame buffer. Set the correct source
++     * coordinates if they differ for this flip.
++     */
++    if (drmmode_crtc->src_x != x || drmmode_crtc->src_y != y) {
++        ret = drmModeSetPlane(ms->fd, drmmode_crtc->plane_id,
++                              drmmode_crtc->mode_crtc->crtc_id, fb_id, 0,
++                              0, 0, crtc->mode.HDisplay, crtc->mode.VDisplay,
++                              x << 16, y << 16, crtc->mode.HDisplay << 16,
++                              crtc->mode.VDisplay << 16);
++        if (ret) {
++            xf86DrvMsg(crtc->scrn->scrnIndex, X_WARNING,
++                       "error changing fb src coordinates for flip: %d\n", ret);
++            return ret;
++        }
++
++        drmmode_crtc->src_x = x;
++        drmmode_crtc->src_y = y;
++    }
++
+     return drmModePageFlip(ms->fd, drmmode_crtc->mode_crtc->crtc_id,
+                            fb_id, flags, data);
+ }
+@@ -1548,6 +1578,90 @@ drmmode_copy_fb(ScrnInfoPtr pScrn, drmmo
+ #endif
+ }
+ 
++void
++drmmode_copy_damage(xf86CrtcPtr crtc, PixmapPtr dst, RegionPtr dmg, Bool empty)
++{
++#ifdef GLAMOR_HAS_GBM
++    ScreenPtr pScreen = xf86ScrnToScreen(crtc->scrn);
++    DrawableRec *src;
++
++    /* Copy the screen's pixmap into the destination pixmap */
++    if (crtc->rotatedPixmap) {
++        src = &crtc->rotatedPixmap->drawable;
++        xf86RotateCrtcRedisplay(crtc, dst, src, dmg, FALSE);
++    } else {
++        src = &pScreen->GetScreenPixmap(pScreen)->drawable;
++        PixmapDirtyCopyArea(dst, src, 0, 0, -crtc->x, -crtc->y, dmg);
++    }
++
++    /* Reset the damages if requested */
++    if (empty)
++        RegionEmpty(dmg);
++
++    /* Wait until the GC operations finish */
++    modesettingPTR(crtc->scrn)->glamor.finish(pScreen);
++#endif
++}
++
++static void
++drmmode_shadow_fb_destroy(xf86CrtcPtr crtc, PixmapPtr pixmap,
++                          void *data, drmmode_bo *bo, uint32_t *fb_id);
++static void
++drmmode_destroy_tearfree_shadow(xf86CrtcPtr crtc)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++    int i;
++
++    if (trf->flip_seq)
++        ms_drm_abort_seq(crtc->scrn, trf->flip_seq);
++
++    for (i = 0; i < ARRAY_SIZE(trf->buf); i++) {
++        if (trf->buf[i].px) {
++            drmmode_shadow_fb_destroy(crtc, trf->buf[i].px, (void *)(long)1,
++                                      &trf->buf[i].bo, &trf->buf[i].fb_id);
++            trf->buf[i].px = NULL;
++            RegionUninit(&trf->buf[i].dmg);
++        }
++    }
++}
++
++static PixmapPtr
++drmmode_shadow_fb_create(xf86CrtcPtr crtc, void *data, int width, int height,
++                         drmmode_bo *bo, uint32_t *fb_id);
++static Bool
++drmmode_create_tearfree_shadow(xf86CrtcPtr crtc)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_ptr drmmode = drmmode_crtc->drmmode;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++    uint32_t w = crtc->mode.HDisplay, h = crtc->mode.VDisplay;
++    int i;
++
++    if (!drmmode->tearfree_enable)
++        return TRUE;
++
++    /* Destroy the old mode's buffers and make new ones */
++    drmmode_destroy_tearfree_shadow(crtc);
++    for (i = 0; i < ARRAY_SIZE(trf->buf); i++) {
++        trf->buf[i].px = drmmode_shadow_fb_create(crtc, NULL, w, h,
++                                                  &trf->buf[i].bo,
++                                                  &trf->buf[i].fb_id);
++        if (!trf->buf[i].px) {
++            drmmode_destroy_tearfree_shadow(crtc);
++            xf86DrvMsg(crtc->scrn->scrnIndex, X_ERROR,
++                       "shadow creation failed for TearFree buf%d\n", i);
++            return FALSE;
++        }
++        RegionInit(&trf->buf[i].dmg, &crtc->bounds, 0);
++    }
++
++    /* Initialize the front buffer with the current scanout */
++    drmmode_copy_damage(crtc, trf->buf[trf->back_idx ^ 1].px,
++                        &trf->buf[trf->back_idx ^ 1].dmg, TRUE);
++    return TRUE;
++}
++
+ static Bool
+ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
+                        Rotation rotation, int x, int y)
+@@ -1581,6 +1695,10 @@ drmmode_set_mode_major(xf86CrtcPtr crtc,
+         crtc->funcs->gamma_set(crtc, crtc->gamma_red, crtc->gamma_green,
+                                crtc->gamma_blue, crtc->gamma_size);
+ 
++        ret = drmmode_create_tearfree_shadow(crtc);
++        if (!ret)
++            goto done;
++
+         can_test = drmmode_crtc_can_test_mode(crtc);
+         if (drmmode_crtc_set_mode(crtc, can_test)) {
+             xf86DrvMsg(crtc->scrn->scrnIndex, X_ERROR,
+@@ -1626,6 +1744,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc,
+         crtc->y = saved_y;
+         crtc->rotation = saved_rotation;
+         crtc->mode = saved_mode;
++        drmmode_create_tearfree_shadow(crtc);
+     } else
+         crtc->active = TRUE;
+ 
+@@ -1931,35 +2050,43 @@ drmmode_clear_pixmap(PixmapPtr pixmap)
+ }
+ 
+ static void *
+-drmmode_shadow_allocate(xf86CrtcPtr crtc, int width, int height)
++drmmode_shadow_fb_allocate(xf86CrtcPtr crtc, int width, int height,
++                           drmmode_bo *bo, uint32_t *fb_id)
+ {
+     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+     drmmode_ptr drmmode = drmmode_crtc->drmmode;
+     int ret;
+ 
+-    if (!drmmode_create_bo(drmmode, &drmmode_crtc->rotate_bo,
+-                           width, height, drmmode->kbpp)) {
++    if (!drmmode_create_bo(drmmode, bo, width, height, drmmode->kbpp)) {
+         xf86DrvMsg(crtc->scrn->scrnIndex, X_ERROR,
+                "Couldn't allocate shadow memory for rotated CRTC\n");
+         return NULL;
+     }
+ 
+-    ret = drmmode_bo_import(drmmode, &drmmode_crtc->rotate_bo,
+-                            &drmmode_crtc->rotate_fb_id);
++    ret = drmmode_bo_import(drmmode, bo, fb_id);
+ 
+     if (ret) {
+         ErrorF("failed to add rotate fb\n");
+-        drmmode_bo_destroy(drmmode, &drmmode_crtc->rotate_bo);
++        drmmode_bo_destroy(drmmode, bo);
+         return NULL;
+     }
+ 
+ #ifdef GLAMOR_HAS_GBM
+     if (drmmode->gbm)
+-        return drmmode_crtc->rotate_bo.gbm;
++        return bo->gbm;
+ #endif
+-    return drmmode_crtc->rotate_bo.dumb;
++    return bo->dumb;
+ }
+ 
++static void *
++drmmode_shadow_allocate(xf86CrtcPtr crtc, int width, int height)
++{
++   drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++
++   return drmmode_shadow_fb_allocate(crtc, width, height,
++                                     &drmmode_crtc->rotate_bo,
++                                     &drmmode_crtc->rotate_fb_id);
++}
+ static PixmapPtr
+ drmmode_create_pixmap_header(ScreenPtr pScreen, int width, int height,
+                              int depth, int bitsPerPixel, int devKind,
+@@ -1983,70 +2110,88 @@ static Bool
+ drmmode_set_pixmap_bo(drmmode_ptr drmmode, PixmapPtr pixmap, drmmode_bo *bo);
+ 
+ static PixmapPtr
+-drmmode_shadow_create(xf86CrtcPtr crtc, void *data, int width, int height)
++drmmode_shadow_fb_create(xf86CrtcPtr crtc, void *data, int width, int height,
++                         drmmode_bo *bo, uint32_t *fb_id)
+ {
+     ScrnInfoPtr scrn = crtc->scrn;
+     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+     drmmode_ptr drmmode = drmmode_crtc->drmmode;
+-    uint32_t rotate_pitch;
+-    PixmapPtr rotate_pixmap;
++    uint32_t pitch;
++    PixmapPtr pixmap;
+     void *pPixData = NULL;
+ 
+     if (!data) {
+-        data = drmmode_shadow_allocate(crtc, width, height);
++        data = drmmode_shadow_fb_allocate(crtc, width, height, bo, fb_id);
+         if (!data) {
+             xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+-                       "Couldn't allocate shadow pixmap for rotated CRTC\n");
++                       "Couldn't allocate shadow pixmap for CRTC\n");
+             return NULL;
+         }
+     }
+ 
+-    if (!drmmode_bo_has_bo(&drmmode_crtc->rotate_bo)) {
++    if (!drmmode_bo_has_bo(bo)) {
+         xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+-                   "Couldn't allocate shadow pixmap for rotated CRTC\n");
++                   "Couldn't allocate shadow pixmap for CRTC\n");
+         return NULL;
+     }
+ 
+-    pPixData = drmmode_bo_map(drmmode, &drmmode_crtc->rotate_bo);
+-    rotate_pitch = drmmode_bo_get_pitch(&drmmode_crtc->rotate_bo);
++    pPixData = drmmode_bo_map(drmmode, bo);
++    pitch = drmmode_bo_get_pitch(bo);
+ 
+-    rotate_pixmap = drmmode_create_pixmap_header(scrn->pScreen,
+-                                                 width, height,
+-                                                 scrn->depth,
+-                                                 drmmode->kbpp,
+-                                                 rotate_pitch,
+-                                                 pPixData);
++    pixmap = drmmode_create_pixmap_header(scrn->pScreen,
++                                          width, height,
++                                          scrn->depth,
++                                          drmmode->kbpp,
++                                          pitch,
++                                          pPixData);
+ 
+-    if (rotate_pixmap == NULL) {
++    if (pixmap == NULL) {
+         xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+-                   "Couldn't allocate shadow pixmap for rotated CRTC\n");
++                   "Couldn't allocate shadow pixmap for CRTC\n");
+         return NULL;
+     }
+ 
+-    drmmode_set_pixmap_bo(drmmode, rotate_pixmap, &drmmode_crtc->rotate_bo);
++    drmmode_set_pixmap_bo(drmmode, pixmap, bo);
+ 
+-    return rotate_pixmap;
++    return pixmap;
+ }
+ 
++static PixmapPtr
++drmmode_shadow_create(xf86CrtcPtr crtc, void *data, int width, int height)
++{
++   drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++
++   return drmmode_shadow_fb_create(crtc, data, width, height,
++                                   &drmmode_crtc->rotate_bo,
++                                   &drmmode_crtc->rotate_fb_id);
++}
+ static void
+-drmmode_shadow_destroy(xf86CrtcPtr crtc, PixmapPtr rotate_pixmap, void *data)
++drmmode_shadow_fb_destroy(xf86CrtcPtr crtc, PixmapPtr pixmap,
++                          void *data, drmmode_bo *bo, uint32_t *fb_id)
+ {
+     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+     drmmode_ptr drmmode = drmmode_crtc->drmmode;
+ 
+-    if (rotate_pixmap) {
+-        rotate_pixmap->drawable.pScreen->DestroyPixmap(rotate_pixmap);
++    if (pixmap) {
++        pixmap->drawable.pScreen->DestroyPixmap(pixmap);
+     }
+ 
+     if (data) {
+-        drmModeRmFB(drmmode->fd, drmmode_crtc->rotate_fb_id);
+-        drmmode_crtc->rotate_fb_id = 0;
++        drmModeRmFB(drmmode->fd, *fb_id);
++        *fb_id = 0;
+ 
+-        drmmode_bo_destroy(drmmode, &drmmode_crtc->rotate_bo);
+-        memset(&drmmode_crtc->rotate_bo, 0, sizeof drmmode_crtc->rotate_bo);
++        drmmode_bo_destroy(drmmode, bo);
++        memset(bo, 0, sizeof(*bo));
+     }
+ }
++static void
++drmmode_shadow_destroy(xf86CrtcPtr crtc, PixmapPtr pixmap, void *data)
++{
++   drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+ 
++   drmmode_shadow_fb_destroy(crtc, pixmap, data, &drmmode_crtc->rotate_bo,
++                             &drmmode_crtc->rotate_fb_id);
++}
+ static void
+ drmmode_crtc_destroy(xf86CrtcPtr crtc)
+ {
+@@ -2380,6 +2525,8 @@ drmmode_crtc_init(ScrnInfoPtr pScrn, drm
+     drmmode_crtc->drmmode = drmmode;
+     drmmode_crtc->vblank_pipe = drmmode_crtc_vblank_pipe(num);
+     xorg_list_init(&drmmode_crtc->mode_list);
++    xorg_list_init(&drmmode_crtc->tearfree.dri_flip_list);
++    drmmode_crtc->next_msc = UINT64_MAX;
+ 
+     props = drmModeObjectGetProperties(drmmode->fd, mode_res->crtcs[num],
+                                        DRM_MODE_OBJECT_CRTC);
+@@ -4242,6 +4389,7 @@ drmmode_free_bos(ScrnInfoPtr pScrn, drmm
+         drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+ 
+         dumb_bo_destroy(drmmode->fd, drmmode_crtc->cursor_bo);
++        drmmode_destroy_tearfree_shadow(crtc);
+     }
+ }
+ 
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/drmmode_display.h xorg-server-21.1.16/hw/xfree86/drivers/modesetting/drmmode_display.h
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/drmmode_display.h	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/drmmode_display.h	2025-02-25 16:03:34.717552794 -0600
+@@ -135,6 +135,7 @@ typedef struct {
+     Bool async_flip_secondaries;
+     Bool dri2_enable;
+     Bool present_enable;
++    Bool tearfree_enable;
+ 
+     uint32_t vrr_prop_id;
+     Bool use_ctm;
+@@ -167,6 +168,20 @@ typedef struct {
+ } drmmode_format_rec, *drmmode_format_ptr;
+ 
+ typedef struct {
++    drmmode_bo bo;
++    uint32_t fb_id;
++    PixmapPtr px;
++    RegionRec dmg;
++} drmmode_shadow_fb_rec, *drmmode_shadow_fb_ptr;
++
++typedef struct {
++    drmmode_shadow_fb_rec buf[2];
++    struct xorg_list dri_flip_list;
++    uint32_t back_idx;
++    uint32_t flip_seq;
++} drmmode_tearfree_rec, *drmmode_tearfree_ptr;
++
++typedef struct {
+     drmmode_ptr drmmode;
+     drmModeCrtcPtr mode_crtc;
+     uint32_t vblank_pipe;
+@@ -184,11 +199,14 @@ typedef struct {
+ 
+     drmmode_bo rotate_bo;
+     unsigned rotate_fb_id;
++    drmmode_tearfree_rec tearfree;
+ 
+     PixmapPtr prime_pixmap;
+     PixmapPtr prime_pixmap_back;
+     unsigned prime_pixmap_x;
+ 
++    int src_x, src_y;
++
+     /**
+      * @{ MSC (vblank count) handling for the PRESENT extension.
+      *
+@@ -200,6 +218,8 @@ typedef struct {
+     uint64_t msc_high;
+     /** @} */
+ 
++    uint64_t next_msc;
++
+     Bool need_modeset;
+     struct xorg_list mode_list;
+ 
+@@ -308,8 +328,11 @@ void drmmode_get_default_bpp(ScrnInfoPtr
+                              int *depth, int *bpp);
+ 
+ void drmmode_copy_fb(ScrnInfoPtr pScrn, drmmode_ptr drmmode);
++void drmmode_copy_damage(xf86CrtcPtr crtc, PixmapPtr dst, RegionPtr damage,
++                         Bool empty);
+ 
+-int drmmode_crtc_flip(xf86CrtcPtr crtc, uint32_t fb_id, uint32_t flags, void *data);
++int drmmode_crtc_flip(xf86CrtcPtr crtc, uint32_t fb_id, int x, int y,
++                      uint32_t flags, void *data);
+ 
+ Bool drmmode_crtc_get_fb_id(xf86CrtcPtr crtc, uint32_t *fb_id, int *x, int *y);
+ 
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/modesetting.man xorg-server-21.1.16/hw/xfree86/drivers/modesetting/modesetting.man
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/modesetting.man	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/modesetting.man	2025-02-25 14:58:15.451248844 -0600
+@@ -109,6 +109,17 @@ When enabled, this option allows the dri
+ entries, if supported by the kernel. By default, GAMMA_LUT will be used for
+ kms drivers which are known to be safe for use of GAMMA_LUT.
+ .TP
++.BI "Option \*qTearFree\*q \*q" boolean \*q
++Enable tearing prevention using the hardware page flipping mechanism.
++It allocates two extra scanout buffers for each CRTC and utilizes damage
++tracking to minimize buffer copying and skip unnecessary flips when the
++screen's contents have not changed. It works on transformed screens too, such
++as rotated and scaled CRTCs. When PageFlip is enabled, fullscreen DRI
++applications will still have the discretion to not use tearing prevention.
++.br
++The default is
++.B off.
++.TP
+ .SH "SEE ALSO"
+ @xservername@(@appmansuffix@), @xconfigfile@(@filemansuffix@), Xserver(@appmansuffix@),
+ X(@miscmansuffix@)
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/pageflip.c xorg-server-21.1.16/hw/xfree86/drivers/modesetting/pageflip.c
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/pageflip.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/pageflip.c	2025-02-25 16:15:54.715757754 -0600
+@@ -35,8 +35,8 @@
+  * Returns a negative value on error, 0 if there was nothing to process,
+  * or 1 if we handled any events.
+  */
+-int
+-ms_flush_drm_events(ScreenPtr screen)
++static int
++ms_flush_drm_events_timeout(ScreenPtr screen, int timeout)
+ {
+     ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+     modesettingPtr ms = modesettingPTR(scrn);
+@@ -45,7 +45,7 @@ ms_flush_drm_events(ScreenPtr screen)
+     int r;
+ 
+     do {
+-            r = xserver_poll(&p, 1, 0);
++            r = xserver_poll(&p, 1, timeout);
+     } while (r == -1 && (errno == EINTR || errno == EAGAIN));
+ 
+     /* If there was an error, r will be < 0.  Return that.  If there was
+@@ -63,6 +63,12 @@ ms_flush_drm_events(ScreenPtr screen)
+     return 1;
+ }
+ 
++int
++ms_flush_drm_events(ScreenPtr screen)
++{
++    return ms_flush_drm_events_timeout(screen, 0);
++}
++
+ #ifdef GLAMOR_HAS_GBM
+ 
+ /*
+@@ -93,6 +99,8 @@ struct ms_crtc_pageflip {
+     Bool on_reference_crtc;
+     /* reference to the ms_flipdata */
+     struct ms_flipdata *flipdata;
++    struct xorg_list node;
++    uint32_t tearfree_seq;
+ };
+ 
+ /**
+@@ -136,7 +144,8 @@ ms_pageflip_handler(uint64_t msc, uint64
+                                 flipdata->fe_usec,
+                                 flipdata->event);
+ 
+-        drmModeRmFB(ms->fd, flipdata->old_fb_id);
++        if (flipdata->old_fb_id)
++            drmModeRmFB(ms->fd, flipdata->old_fb_id);
+     }
+     ms_pageflip_free(flip);
+ }
+@@ -160,11 +169,32 @@ ms_pageflip_abort(void *data)
+ }
+ 
+ static Bool
+-do_queue_flip_on_crtc(modesettingPtr ms, xf86CrtcPtr crtc,
+-                      uint32_t flags, uint32_t seq)
++do_queue_flip_on_crtc(ScreenPtr screen, xf86CrtcPtr crtc,
++                      uint32_t flags, uint32_t seq, uint32_t fb_id, int x, int y)
+ {
+-    return drmmode_crtc_flip(crtc, ms->drmmode.fb_id, flags,
+-                             (void *) (uintptr_t) seq);
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++
++    while (drmmode_crtc_flip(crtc, fb_id, x, y, flags, (void *)(long)seq)) {
++        /* We may have failed because the event queue was full.  Flush it
++         * and retry.  If there was nothing to flush, then we failed for
++         * some other reason and should just return an error.
++         */
++        if (ms_flush_drm_events(screen) <= 0) {
++            /* The failure could be caused by a pending TearFree flip, in which
++             * case we should wait until there's a new event and try again.
++             */
++            if (!trf->flip_seq || ms_flush_drm_events_timeout(screen, -1) < 0) {
++                ms_drm_abort_seq(crtc->scrn, seq);
++                return TRUE;
++            }
++        }
++
++        /* We flushed some events, so try again. */
++        xf86DrvMsg(crtc->scrn->scrnIndex, X_WARNING, "flip queue retry\n");
++    }
++
++    return FALSE;
+ }
+ 
+ enum queue_flip_status {
+@@ -177,11 +207,10 @@ enum queue_flip_status {
+ static int
+ queue_flip_on_crtc(ScreenPtr screen, xf86CrtcPtr crtc,
+                    struct ms_flipdata *flipdata,
+-                   int ref_crtc_vblank_pipe, uint32_t flags)
++                   xf86CrtcPtr ref_crtc, uint32_t flags)
+ {
+     ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+     modesettingPtr ms = modesettingPTR(scrn);
+-    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+     struct ms_crtc_pageflip *flip;
+     uint32_t seq;
+ 
+@@ -193,7 +222,7 @@ queue_flip_on_crtc(ScreenPtr screen, xf8
+     /* Only the reference crtc will finally deliver its page flip
+      * completion event. All other crtc's events will be discarded.
+      */
+-    flip->on_reference_crtc = (drmmode_crtc->vblank_pipe == ref_crtc_vblank_pipe);
++    flip->on_reference_crtc = crtc == ref_crtc;
+     flip->flipdata = flipdata;
+ 
+     seq = ms_drm_queue_alloc(crtc, flip, ms_pageflip_handler, ms_pageflip_abort);
+@@ -205,20 +234,9 @@ queue_flip_on_crtc(ScreenPtr screen, xf8
+     /* take a reference on flipdata for use in flip */
+     flipdata->flip_count++;
+ 
+-    while (do_queue_flip_on_crtc(ms, crtc, flags, seq)) {
+-        /* We may have failed because the event queue was full.  Flush it
+-         * and retry.  If there was nothing to flush, then we failed for
+-         * some other reason and should just return an error.
+-         */
+-        if (ms_flush_drm_events(screen) <= 0) {
+-            /* Aborting will also decrement flip_count and free(flip). */
+-            ms_drm_abort_seq(scrn, seq);
+-            return QUEUE_FLIP_DRM_FLUSH_FAILED;
+-        }
+-
+-        /* We flushed some events, so try again. */
+-        xf86DrvMsg(scrn->scrnIndex, X_WARNING, "flip queue retry\n");
+-    }
++    if (do_queue_flip_on_crtc(screen, crtc, flags, seq, ms->drmmode.fb_id,
++                              crtc->x, crtc->y))
++       return QUEUE_FLIP_DRM_FLUSH_FAILED;
+ 
+     /* The page flip succeeded. */
+     return QUEUE_FLIP_SUCCESS;
+@@ -294,20 +312,76 @@ ms_print_pageflip_error(int screen_index
+     }
+ }
+ 
++static Bool
++ms_tearfree_dri_flip(modesettingPtr ms, xf86CrtcPtr crtc, void *event,
++                     ms_pageflip_handler_proc pageflip_handler,
++                     ms_pageflip_abort_proc pageflip_abort)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++    struct ms_crtc_pageflip *flip;
++    struct ms_flipdata *flipdata;
++    RegionRec region;
++    RegionPtr dirty;
++
++    if (!ms_tearfree_is_active_on_crtc(crtc))
++        return FALSE;
++
++    /* Check for damage on the primary scanout to know if TearFree will flip */
++    dirty = DamageRegion(ms->damage);
++    if (RegionNil(dirty))
++        return FALSE;
++
++    /* Compute how much of the current damage intersects with this CRTC */
++    RegionInit(&region, &crtc->bounds, 0);
++    RegionIntersect(&region, &region, dirty);
++
++    /* No damage on this CRTC means no TearFree flip. This means the DRI client
++     * didn't change this CRTC's contents at all with its presentation, possibly
++     * because its window is fully occluded by another window on this CRTC.
++     */
++    if (RegionNil(&region))
++        return FALSE;
++
++    flip = calloc(1, sizeof(*flip));
++    if (!flip)
++        return FALSE;
++
++    flipdata = calloc(1, sizeof(*flipdata));
++    if (!flipdata) {
++        free(flip);
++        return FALSE;
++    }
++
++    /* Only track the DRI client's fake flip on the reference CRTC, which aligns
++     * with the behavior of Present when a client copies its pixmap rather than
++     * directly flipping it onto the display.
++     */
++    flip->on_reference_crtc = TRUE;
++    flip->flipdata = flipdata;
++    flip->tearfree_seq = trf->flip_seq;
++    flipdata->screen = xf86ScrnToScreen(crtc->scrn);
++    flipdata->event = event;
++    flipdata->flip_count = 1;
++    flipdata->event_handler = pageflip_handler;
++    flipdata->abort_handler = pageflip_abort;
++
++    /* Keep the list in FIFO order so that clients are notified in order */
++    xorg_list_append(&flip->node, &trf->dri_flip_list);
++    return TRUE;
++}
+ 
+ Bool
+ ms_do_pageflip(ScreenPtr screen,
+                PixmapPtr new_front,
+                void *event,
+-               int ref_crtc_vblank_pipe,
++               xf86CrtcPtr ref_crtc,
+                Bool async,
+                ms_pageflip_handler_proc pageflip_handler,
+                ms_pageflip_abort_proc pageflip_abort,
+                const char *log_prefix)
+ {
+-#ifndef GLAMOR_HAS_GBM
+-    return FALSE;
+-#else
++
+     ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+     modesettingPtr ms = modesettingPTR(scrn);
+     xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(scrn);
+@@ -315,6 +389,22 @@ ms_do_pageflip(ScreenPtr screen,
+     uint32_t flags;
+     int i;
+     struct ms_flipdata *flipdata;
++
++    /* A NULL pixmap indicates this DRI client's pixmap is to be flipped through
++     * TearFree instead. The pixmap is already copied to the primary scanout at
++     * this point, so all that's left is to wire up this fake flip to TearFree
++     * so that TearFree can send a notification to the DRI client when the
++     * pixmap actually appears on the display. This is the only way to let DRI
++     * clients accurately know when their pixmaps appear on the display when
++     * TearFree is enabled.
++     */
++    if (!new_front) {
++        if (!ms_tearfree_dri_flip(ms, ref_crtc, event, pageflip_handler,
++                                  pageflip_abort))
++            goto error_free_event;
++        return TRUE;
++    }
++
+     ms->glamor.block_handler(screen);
+ 
+     new_front_bo.gbm = ms->glamor.gbm_bo_from_pixmap(screen, new_front);
+@@ -324,7 +414,7 @@ ms_do_pageflip(ScreenPtr screen,
+         xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+                    "%s: Failed to get GBM BO for flip to new front.\n",
+                    log_prefix);
+-        return FALSE;
++        goto error_free_event;
+     }
+ 
+     flipdata = calloc(1, sizeof(struct ms_flipdata));
+@@ -332,7 +422,7 @@ ms_do_pageflip(ScreenPtr screen,
+         drmmode_bo_destroy(&ms->drmmode, &new_front_bo);
+         xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+                    "%s: Failed to allocate flipdata.\n", log_prefix);
+-        return FALSE;
++        goto error_free_event;
+     }
+ 
+     flipdata->event = event;
+@@ -380,7 +470,6 @@ ms_do_pageflip(ScreenPtr screen,
+     for (i = 0; i < config->num_crtc; i++) {
+         enum queue_flip_status flip_status;
+         xf86CrtcPtr crtc = config->crtc[i];
+-        drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+ 
+         if (!xf86_crtc_on(crtc))
+             continue;
+@@ -401,13 +490,11 @@ ms_do_pageflip(ScreenPtr screen,
+          * outputs in a "clone-mode" or "mirror-mode" configuration.
+          */
+         if (ms->drmmode.can_async_flip && ms->drmmode.async_flip_secondaries &&
+-            (drmmode_crtc->vblank_pipe != ref_crtc_vblank_pipe) &&
+-            (ref_crtc_vblank_pipe >= 0))
++            ref_crtc && crtc != ref_crtc)
+             flags |= DRM_MODE_PAGE_FLIP_ASYNC;
+ 
+         flip_status = queue_flip_on_crtc(screen, crtc, flipdata,
+-                                         ref_crtc_vblank_pipe,
+-                                         flags);
++                                         ref_crtc, flags);
+ 
+         switch (flip_status) {
+             case QUEUE_FLIP_ALLOC_FAILED:
+@@ -456,13 +543,149 @@ error_out:
+     drmmode_bo_destroy(&ms->drmmode, &new_front_bo);
+     /* if only the local reference - free the structure,
+      * else drop the local reference and return */
+-    if (flipdata->flip_count == 1)
++    if (flipdata->flip_count == 1) {
+         free(flipdata);
+-    else
++    } else {
+         flipdata->flip_count--;
++        return FALSE;
++    }
+ 
++error_free_event:
++    free(event);
+     return FALSE;
+-#endif /* GLAMOR_HAS_GBM */
+ }
+ 
++Bool
++ms_tearfree_dri_abort(xf86CrtcPtr crtc,
++                      Bool (*match)(void *data, void *match_data),
++                      void *match_data)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++    struct ms_crtc_pageflip *flip;
++
++    /* The window is getting destroyed; abort without notifying the client */
++    xorg_list_for_each_entry(flip, &trf->dri_flip_list, node) {
++        if (match(flip->flipdata->event, match_data)) {
++            xorg_list_del(&flip->node);
++            ms_pageflip_abort(flip);
++            return TRUE;
++        }
++    }
++
++    return FALSE;
++}
++
++void
++ms_tearfree_dri_abort_all(xf86CrtcPtr crtc)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++    struct ms_crtc_pageflip *flip, *tmp;
++    uint64_t usec = 0, msc = 0;
++
++    /* Nothing to abort if there aren't any DRI clients waiting for a flip */
++    if (xorg_list_is_empty(&trf->dri_flip_list))
++        return;
++
++    /* Even though we're aborting, these clients' pixmaps were actually blitted,
++     * so technically the presentation isn't aborted. That's why the normal
++     * handler is called instead of the abort handler, along with the current
++     * time and MSC for this CRTC.
++     */
++    ms_get_crtc_ust_msc(crtc, &usec, &msc);
++    xorg_list_for_each_entry_safe(flip, tmp, &trf->dri_flip_list, node)
++        ms_pageflip_handler(msc, usec, flip);
++    xorg_list_init(&trf->dri_flip_list);
++}
++
++static void
++ms_tearfree_dri_notify(drmmode_tearfree_ptr trf, uint64_t msc, uint64_t usec)
++{
++    struct ms_crtc_pageflip *flip, *tmp;
++
++    xorg_list_for_each_entry_safe(flip, tmp, &trf->dri_flip_list, node) {
++        /* If a TearFree flip was already pending at the time this DRI client's
++         * pixmap was copied, then the pixmap isn't contained in this TearFree
++         * flip, but will be part of the next TearFree flip instead.
++         */
++        if (flip->tearfree_seq) {
++            flip->tearfree_seq = 0;
++        } else {
++            xorg_list_del(&flip->node);
++            ms_pageflip_handler(msc, usec, flip);
++        }
++    }
++}
++
++static void
++ms_tearfree_flip_abort(void *data)
++{
++    xf86CrtcPtr crtc = data;
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++
++    trf->flip_seq = 0;
++    ms_tearfree_dri_abort_all(crtc);
++}
++
++static void
++ms_tearfree_flip_handler(uint64_t msc, uint64_t usec, void *data)
++{
++    xf86CrtcPtr crtc = data;
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++
++    /* Swap the buffers and complete the flip */
++    trf->back_idx ^= 1;
++    trf->flip_seq = 0;
++
++    /* Notify DRI clients that their pixmaps are now visible on the display */
++    ms_tearfree_dri_notify(trf, msc, usec);
++}
++
++Bool
++ms_do_tearfree_flip(ScreenPtr screen, xf86CrtcPtr crtc)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++    uint32_t idx = trf->back_idx, seq;
++
++    seq = ms_drm_queue_alloc(crtc, crtc, ms_tearfree_flip_handler,
++                             ms_tearfree_flip_abort);
++    if (!seq) {
++        /* Need to notify the DRI clients if a sequence wasn't allocated. Once a
++         * sequence is allocated, explicitly performing this cleanup isn't
++         * necessary since it's already done as part of aborting the sequence.
++         */
++        ms_tearfree_dri_abort_all(crtc);
++        goto no_flip;
++    }
++
++    /* Copy the damage to the back buffer and then flip it at the vblank */
++    drmmode_copy_damage(crtc, trf->buf[idx].px, &trf->buf[idx].dmg, TRUE);
++    if (do_queue_flip_on_crtc(screen, crtc, DRM_MODE_PAGE_FLIP_EVENT,
++                              seq, trf->buf[idx].fb_id, 0, 0))
++        goto no_flip;
++
++    trf->flip_seq = seq;
++    return FALSE;
++
++no_flip:
++    xf86DrvMsg(crtc->scrn->scrnIndex, X_WARNING,
++               "TearFree flip failed, rendering frame without TearFree\n");
++    drmmode_copy_damage(crtc, trf->buf[idx ^ 1].px,
++                        &trf->buf[idx ^ 1].dmg, FALSE);
++    return TRUE;
++}
+ #endif
++
++Bool
++ms_tearfree_is_active_on_crtc(xf86CrtcPtr crtc)
++{
++    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
++    drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++
++    /* If TearFree is enabled, XServer owns the VT, and the CRTC is active */
++    return trf->buf[0].px && crtc->scrn->vtSema && xf86_crtc_on(crtc);
++}
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/present.c xorg-server-21.1.16/hw/xfree86/drivers/modesetting/present.c
+--- xorg-server-21.1.16.orig/hw/xfree86/drivers/modesetting/present.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/drivers/modesetting/present.c	2025-02-25 16:40:27.849799232 -0600
+@@ -165,6 +165,13 @@ ms_present_abort_vblank(RRCrtcPtr crtc,
+ {
+     ScreenPtr screen = crtc->pScreen;
+     ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
++#ifdef GLAMOR_HAS_GBM
++    xf86CrtcPtr xf86_crtc = crtc->devPrivate;
++
++    /* Check if this is a fake flip routed through TearFree and abort it */
++    if (ms_tearfree_dri_abort(xf86_crtc, ms_present_event_match, &event_id))
++        return;
++#endif
+ 
+     ms_drm_abort(scrn, ms_present_event_match, &event_id);
+ }
+@@ -318,14 +325,32 @@ ms_present_check_flip(RRCrtcPtr crtc,
+     modesettingPtr ms = modesettingPTR(scrn);
+ 
+     if (ms->drmmode.sprites_visible > 0)
+-        return FALSE;
++        goto no_flip;
+ 
+     if(!ms_present_check_unflip(crtc, window, pixmap, sync_flip, reason))
+-        return FALSE;
++        goto no_flip;
+ 
+     ms->flip_window = window;
+ 
+     return TRUE;
++
++no_flip:
++    /* Export some info about TearFree if Present can't flip anyway */
++    if (reason && ms->drmmode.tearfree_enable) {
++        xf86CrtcPtr xf86_crtc = crtc->devPrivate;
++        drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
++        drmmode_tearfree_ptr trf = &drmmode_crtc->tearfree;
++
++        if (ms_tearfree_is_active_on_crtc(xf86_crtc)) {
++            if (trf->flip_seq)
++                /* The driver has a TearFree flip pending */
++                *reason = PRESENT_FLIP_REASON_DRIVER_TEARFREE_FLIPPING;
++            else
++                /* The driver uses TearFree flips and there's no flip pending */
++                *reason = PRESENT_FLIP_REASON_DRIVER_TEARFREE;
++        }
++    }
++    return FALSE;
+ }
+ 
+ /*
+@@ -342,12 +367,13 @@ ms_present_flip(RRCrtcPtr crtc,
+     ScreenPtr screen = crtc->pScreen;
+     ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+     modesettingPtr ms = modesettingPTR(scrn);
+-    xf86CrtcPtr xf86_crtc = crtc->devPrivate;
+-    drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
++    xf86CrtcPtr xf86_crtc = crtc->devPrivate; 
+     Bool ret;
+     struct ms_present_vblank_event *event;
+ 
+-    if (!ms_present_check_flip(crtc, ms->flip_window, pixmap, sync_flip, NULL))
++    /* A NULL pixmap means this is a fake flip to be routed through TearFree */
++    if (pixmap &&
++        !ms_present_check_flip(crtc, ms->flip_window, pixmap, sync_flip, NULL))
+         return FALSE;
+ 
+     event = calloc(1, sizeof(struct ms_present_vblank_event));
+@@ -360,6 +386,12 @@ ms_present_flip(RRCrtcPtr crtc,
+     event->event_id = event_id;
+     event->unflip = FALSE;
+ 
++    /* Register the fake flip (indicated by a NULL pixmap) with TearFree */
++    if (!pixmap)
++        return ms_do_pageflip(screen, NULL, event, xf86_crtc, FALSE,
++                              ms_present_flip_handler, ms_present_flip_abort,
++                              "Present-TearFree-flip");
++
+     /* A window can only flip if it covers the entire X screen.
+      * Only one window can flip at a time.
+      *
+@@ -371,7 +403,7 @@ ms_present_flip(RRCrtcPtr crtc,
+         ms_present_set_screen_vrr(scrn, TRUE);
+     }
+ 
+-    ret = ms_do_pageflip(screen, pixmap, event, drmmode_crtc->vblank_pipe, !sync_flip,
++    ret = ms_do_pageflip(screen, pixmap, event, xf86_crtc, !sync_flip,
+                          ms_present_flip_handler, ms_present_flip_abort,
+                          "Present-flip");
+     if (ret)
+@@ -404,7 +436,7 @@ ms_present_unflip(ScreenPtr screen, uint
+         event->event_id = event_id;
+         event->unflip = TRUE;
+ 
+-        if (ms_do_pageflip(screen, pixmap, event, -1, FALSE,
++        if (ms_do_pageflip(screen, pixmap, event, NULL, FALSE,
+                            ms_present_flip_handler, ms_present_flip_abort,
+                            "Present-unflip")) {
+             return;
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/modes/xf86Crtc.h xorg-server-21.1.16/hw/xfree86/modes/xf86Crtc.h
+--- xorg-server-21.1.16.orig/hw/xfree86/modes/xf86Crtc.h	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/modes/xf86Crtc.h	2025-02-25 15:18:13.451722949 -0600
+@@ -912,6 +913,11 @@ extern _X_EXPORT void
+ extern _X_EXPORT Bool
+  xf86CrtcRotate(xf86CrtcPtr crtc);
+ 
++extern _X_EXPORT void
++ xf86RotateCrtcRedisplay(xf86CrtcPtr crtc, PixmapPtr dst_pixmap,
++                         DrawableRec *src_drawable, RegionPtr region,
++                         Bool transform_src);
++
+ /*
+  * Clean up any rotation data, used when a crtc is turned off
+  * as well as when rotation is disabled.
+diff -Naurp xorg-server-21.1.16.orig/hw/xfree86/modes/xf86Rotate.c xorg-server-21.1.16/hw/xfree86/modes/xf86Rotate.c
+--- xorg-server-21.1.16.orig/hw/xfree86/modes/xf86Rotate.c	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/hw/xfree86/modes/xf86Rotate.c	2025-02-25 15:34:07.737288404 -0600
+@@ -39,13 +39,13 @@
+ #include "X11/extensions/dpmsconst.h"
+ #include "X11/Xatom.h"
+ 
+-static void
+-xf86RotateCrtcRedisplay(xf86CrtcPtr crtc, RegionPtr region)
++void
++xf86RotateCrtcRedisplay(xf86CrtcPtr crtc, PixmapPtr dst_pixmap,
++                        DrawableRec *src_drawable, RegionPtr region,
++                        Bool transform_src)
+ {
+     ScrnInfoPtr scrn = crtc->scrn;
+     ScreenPtr screen = scrn->pScreen;
+-    WindowPtr root = screen->root;
+-    PixmapPtr dst_pixmap = crtc->rotatedPixmap;
+     PictFormatPtr format = PictureWindowFormat(screen->root);
+     int error;
+     PicturePtr src, dst;
+@@ -57,7 +57,7 @@ xf86RotateCrtcRedisplay(xf86CrtcPtr crtc
+         return;
+ 
+     src = CreatePicture(None,
+-                        &root->drawable,
++                        src_drawable,
+                         format,
+                         CPSubwindowMode,
+                         &include_inferiors, serverClient, &error);
+@@ -70,9 +70,12 @@ xf86RotateCrtcRedisplay(xf86CrtcPtr crtc
+     if (!dst)
+         return;
+ 
+-    error = SetPictureTransform(src, &crtc->crtc_to_framebuffer);
+-    if (error)
+-        return;
++    if (transform_src) {
++       error = SetPictureTransform(src, &crtc->crtc_to_framebuffer);
++       if (error)
++          return;
++    }
++
+     if (crtc->transform_in_use && crtc->filter)
+         SetPicturePictFilter(src, crtc->filter, crtc->params, crtc->nparams);
+ 
+@@ -205,7 +208,9 @@ xf86RotateRedisplay(ScreenPtr pScreen)
+ 
+                 /* update damaged region */
+                 if (RegionNotEmpty(&crtc_damage))
+-                    xf86RotateCrtcRedisplay(crtc, &crtc_damage);
++                    xf86RotateCrtcRedisplay(crtc, crtc->rotatedPixmap,
++                                            &pScreen->root->drawable,
++                                            &crtc_damage, TRUE);
+ 
+                 RegionUninit(&crtc_damage);
+             }
+diff -Naurp xorg-server-21.1.16.orig/include/pixmap.h xorg-server-21.1.16/include/pixmap.h
+--- xorg-server-21.1.16.orig/include/pixmap.h	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/include/pixmap.h	2025-02-25 15:23:49.195718609 -0600
+@@ -105,6 +105,8 @@ extern _X_EXPORT void FreeScratchPixmapH
+ 
+ extern _X_EXPORT Bool CreateScratchPixmapsForScreen(ScreenPtr /*pScreen */ );
+ 
++extern _X_EXPORT Bool PixmapScreenInit(ScreenPtr /*pScreen */ );
++
+ extern _X_EXPORT void FreeScratchPixmapsForScreen(ScreenPtr /*pScreen */ );
+ 
+ extern _X_EXPORT PixmapPtr AllocatePixmap(ScreenPtr /*pScreen */ ,
+@@ -134,4 +136,9 @@ PixmapStopDirtyTracking(DrawablePtr src,
+ extern _X_EXPORT Bool
+ PixmapSyncDirtyHelper(PixmapDirtyUpdatePtr dirty);
+ 
++extern _X_EXPORT void
++PixmapDirtyCopyArea(PixmapPtr dst, DrawablePtr src,
++                    int x, int y, int dst_x, int dst_y,
++                    RegionPtr dirty_region);
++
+ #endif                          /* PIXMAP_H */
+diff -Naurp xorg-server-21.1.16.orig/present/present.h xorg-server-21.1.16/present/present.h
+--- xorg-server-21.1.16.orig/present/present.h	2025-02-25 12:56:05.000000000 -0600
++++ xorg-server-21.1.16/present/present.h	2025-02-25 15:29:43.082730575 -0600
+@@ -29,7 +29,9 @@
+ 
+ typedef enum {
+     PRESENT_FLIP_REASON_UNKNOWN,
+-    PRESENT_FLIP_REASON_BUFFER_FORMAT
++    PRESENT_FLIP_REASON_BUFFER_FORMAT,
++    PRESENT_FLIP_REASON_DRIVER_TEARFREE,
++    PRESENT_FLIP_REASON_DRIVER_TEARFREE_FLIPPING
+ } PresentFlipReason;
+ 
+ typedef struct present_vblank present_vblank_rec, *present_vblank_ptr;

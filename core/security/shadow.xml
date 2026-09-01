@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY shadow-root "https://github.com/shadow-maint/shadow/releases/download">
+  <!ENTITY shadow-download "&shadow-root;/&shadow-version;/shadow-&shadow-version;.tar.xz">
+]>
+
+<sect1 id="shadow" xreflabel="Shadow-&shadow-version;">
+  <?dbhtml filename="shadow.html"?>
+
+
+  <title>Shadow-&shadow-version;</title>
+
+  <indexterm zone="shadow">
+    <primary sortas="a-Shadow">Shadow</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to Shadow</title>
+
+    <para>
+      Shadow was indeed installed in LFS and there is
+      no reason to reinstall it unless you installed
+      Linux-PAM after your LFS system was completed.
+      If you have installed Linux-PAM,
+      reinstalling Shadow will allow programs such as
+      <command>login</command> and <command>su</command> to utilize PAM.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&shadow-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&patch-root;/shadow-&shadow-version;-useradd_segfault-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+    <bridgehead renderas="sect3">Shadow Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="linux-pam"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of Shadow</title>
+
+    <important>
+      <para>
+        The installation commands shown below are for installations where
+        Linux-PAM has been installed and
+        Shadow is being reinstalled to support the
+        Linux-PAM installation.
+      </para>
+    </important>
+
+    <warning>
+      <para>
+        If reinstalling shadow for a version update, be sure to
+        reaccomplish the Linux-PAM configuration below.  The installation
+        of shadow overwrites many of the files in
+        <filename class="directory">/etc/pam.d/</filename>.
+      </para>
+    </warning>
+
+    <para>
+      First, disable the installation of some manpages,
+      use <emphasis>YESCRYPT</emphasis>, change mailbox locations, and remove
+      symlinked directories from <envar>PATH</envar>:
+    </para>
+
+<screen><userinput remap="pre">find man -name Makefile.in                \
+         -exec sed -e 's/getspnam\.3 / /' \
+                   -e 's/passwd\.5 / /'   \
+                   -i {} \; &amp;&amp;
+
+sed -e 's@#ENCRYPT_METHOD SHA512@ENCRYPT_METHOD YESCRYPT@' \
+    -e 's@/var/spool/mail@/var/mail@'                      \
+    -e '/PATH=/{s@/sbin:@@;s@/bin:@@}'                     \
+    -i etc/login.defs</userinput></screen>
+
+    <para>
+      Reinstall Shadow by running the following
+      commands:
+    </para>
+
+<screen><userinput>./configure --sysconfdir=/etc   \
+            --disable-static    \
+            --without-libbsd    \</userinput><userinput revision="openrc,sysv">
+            --disable-logind    \</userinput><userinput>
+            --with-{b,yes}crypt &amp;&amp;
+make</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>make exec_prefix=/usr pamddir= install</userinput></screen>
+
+    <para>
+      The man pages were installed in LFS, but if reinstallation is
+      desired, run (as the &root; user):
+    </para>
+
+<screen role="root"><userinput>make -C man install-man</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-configure;
+
+    <para>
+      <parameter>--without-libbsd</parameter>: Prevents looking for the
+      <command>readpassphrase</command> function, which can be found only in
+      <filename class="libraryfile">libbsd</filename>, which is not in GLFS.
+      An internal implementation of <command>readpassphrase</command> is used
+      instead.
+    </para>
+
+    <para revision="openrc,sysv">
+      <parameter>--disable-logind</parameter>: This option is required
+      for systems without <filename class="libraryfile">libsystemd</filename>.
+      <xref linkend="elogind"/> does not provide that library.
+    </para>
+
+    <para>
+      <parameter>pamddir=</parameter>: Prevents installation of the shipped
+      PAM configuration files into
+      <filename class='directory'>/etc/pam.d</filename>. The shipped
+      configuration does not work with the GLFS PAM configuration and we
+      will create these configuration files explicitly.
+    </para>
+
+<!-- This is the default
+    <para>
+      <parameter>-\-with-group-name-max-length=32</parameter>: The maximum
+      user name is 32 characters. Make the maximum group name the same.
+    </para>
+    -->
+<!--
+    <para>
+      <parameter>-\-without-su</parameter>: Don't reinstall
+      <command>su</command> because upstream recommends using the
+      <command>su</command> command from <xref linkend='util-linux'/>
+      when Linux-PAM is available.
+    </para>
+-->
+  </sect2>
+
+<!-- Now, /etc/default/useradd is not reinstalled anymore, and this
+     configuration has been done in lfs
+  <sect2 role="configuration">
+    <title>Configuring Shadow</title>
+
+    <para>
+      Shadow's stock configuration for the
+      <command>useradd</command> utility may not be desirable for your
+      installation. One default parameter causes <command>useradd</command> to
+      create a mailbox file for any newly created user.
+      <command>useradd</command> will make the group ownership of this file to
+      the <systemitem class="groupname">mail</systemitem> group with 0660
+      permissions. If you would prefer that these mailbox files are not created
+      by <command>useradd</command>, issue the following command as the
+      <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>sed -i 's/yes/no/' /etc/default/useradd</userinput></screen>
+  </sect2>
+-->
+  <sect2 role="configuration">
+    <title>Configuring Linux-PAM to Work with Shadow</title>
+
+    <sect3 id="pam.d">
+      <title>Config Files</title>
+
+      <para>
+        <filename>/etc/pam.d/*</filename> or alternatively
+        <filename>/etc/pam.conf</filename>,
+        <filename>/etc/login.defs</filename> and
+        <filename>/etc/security/*</filename>
+      </para>
+
+      <indexterm zone="shadow pam.d">
+        <primary sortas="e-etc-pam.d">/etc/pam.d/*</primary>
+      </indexterm>
+
+      <indexterm zone="shadow pam.d">
+        <primary sortas="e-etc-pam.conf">/etc/pam.conf</primary>
+      </indexterm>
+
+      <indexterm zone="shadow pam.d">
+        <primary sortas="e-etc-login.defs">/etc/login.defs</primary>
+      </indexterm>
+
+      <indexterm zone="shadow pam.d">
+        <primary sortas="e-etc-security">/etc/security/*</primary>
+      </indexterm>
+    </sect3>
+
+    <sect3>
+      <title>Configuration Information</title>
+
+      <para>
+        Configuring your system to use Linux-PAM can
+        be a complex task. The information below will provide a basic setup so
+        that Shadow's login and password
+        functionality will work effectively with
+        Linux-PAM. Review the information and links
+        on the <xref linkend="linux-pam"/> page for further configuration
+        information. For information specific to integrating
+        Shadow, Linux-PAM
+        and libpwquality, you can visit the
+        following link:
+      </para>
+
+      <itemizedlist spacing="compact">
+        <listitem>
+          <!-- Old URL redirects to here. -->
+          <para>
+            <ulink url="http://web.archive.org/web/20240812102759/https://deer-run.com/users/hal/linux_passwords_pam.html"/>
+          </para>
+        </listitem>
+      </itemizedlist>
+
+      <sect4 id="pam-login-defs">
+        <title>Configuring /etc/login.defs</title>
+
+        <para>
+          The <command>login</command> program currently performs many functions
+          which Linux-PAM modules should now handle.
+          The following <command>sed</command> command will comment out the
+          appropriate lines in <filename>/etc/login.defs</filename>, and stop
+          <command>login</command> from performing these functions (a backup
+          file named <filename>/etc/login.defs.orig</filename> is also created
+          to preserve the original file's contents). Issue the following
+          commands as the <systemitem class="username">root</systemitem> user:
+        </para>
+
+        <indexterm zone="shadow pam-login-defs">
+          <primary sortas="e-etc-login.defs">/etc/login.defs</primary>
+        </indexterm>
+
+<screen role="root"><userinput>&install-file; /etc/login.defs /etc/login.defs.orig &amp;&amp;
+for FUNCTION in FAIL_DELAY               \
+                FAILLOG_ENAB             \
+                LASTLOG_ENAB             \
+                MAIL_CHECK_ENAB          \
+                OBSCURE_CHECKS_ENAB      \
+                PORTTIME_CHECKS_ENAB     \
+                QUOTAS_ENAB              \
+                CONSOLE MOTD_FILE        \
+                FTMP_FILE NOLOGINS_FILE  \
+                ENV_HZ PASS_MIN_LEN      \
+                SU_WHEEL_ONLY            \
+                CRACKLIB_DICTPATH        \
+                PASS_CHANGE_TRIES        \
+                PASS_ALWAYS_WARN         \
+                CHFN_AUTH ENCRYPT_METHOD \
+                ENVIRON_FILE
+do
+    sed -i "s/^${FUNCTION}/# &amp;/" /etc/login.defs
+done</userinput></screen>
+      </sect4>
+
+      <sect4>
+        <title>Configuring the /etc/pam.d/ Files</title>
+
+        <para>
+          As mentioned previously in the Linux-PAM
+          instructions, Linux-PAM has two supported
+          methods for configuration. The commands below assume that you've
+          chosen to use a directory based configuration, where each program has
+          its own configuration file.  You can optionally use a single
+          <filename>/etc/pam.conf</filename> configuration file by using the
+          text from the files below, and supplying the program name as an
+          additional first field for each line.
+        </para>
+
+        <para>
+          As the <systemitem class="username">root</systemitem> user, create
+          the following Linux-PAM configuration files
+          in the <filename class="directory">/etc/pam.d/</filename> directory
+          (or add the contents to the <filename>/etc/pam.conf</filename> file)
+          using the following commands:
+        </para>
+      </sect4>
+
+      <sect4>
+        <title>'login'</title>
+
+<screen role="root"><userinput>cat &gt; /etc/pam.d/login &lt;&lt; "EOF"
+<literal># Begin /etc/pam.d/login
+
+# Set failure delay before next prompt to 3 seconds
+auth      optional    pam_faildelay.so  delay=3000000
+
+# Check to make sure that the user is allowed to login
+auth      requisite   pam_nologin.so
+
+# Check to make sure that root is allowed to login
+# Disabled by default. You will need to create /etc/securetty
+# file for this module to function. See man 5 securetty.
+#auth      required    pam_securetty.so
+
+# Additional group memberships - disabled by default
+#auth      optional    pam_group.so
+
+# include system auth settings
+auth      include     system-auth
+
+# check access for the user
+account   required    pam_access.so
+
+# include system account settings
+account   include     system-account
+
+# Set default environment variables for the user
+session   required    pam_env.so
+
+# Set resource limits for the user
+session   required    pam_limits.so
+
+# Display the message of the day - Disabled by default
+#session   optional    pam_motd.so
+
+# Check user's mail - Disabled by default
+#session   optional    pam_mail.so      standard quiet
+
+# include system session and password settings
+session   include     system-session
+password  include     system-password
+
+# End /etc/pam.d/login</literal>
+EOF</userinput></screen>
+      </sect4>
+
+      <sect4>
+        <title>'passwd'</title>
+
+<screen role="root"><userinput>cat &gt; /etc/pam.d/passwd &lt;&lt; "EOF"
+<literal># Begin /etc/pam.d/passwd
+
+password  include     system-password
+
+# End /etc/pam.d/passwd</literal>
+EOF</userinput></screen>
+      </sect4>
+
+      <sect4>
+        <title>'su'</title>
+
+<screen role="root"><userinput>cat &gt; /etc/pam.d/su &lt;&lt; "EOF"
+<literal># Begin /etc/pam.d/su
+
+# always allow root
+auth      sufficient  pam_rootok.so
+
+# Allow users in the wheel group to execute su without a password
+# disabled by default
+#auth      sufficient  pam_wheel.so trust use_uid
+
+# include system auth settings
+auth      include     system-auth
+
+# limit su to users in the wheel group
+# disabled by default
+#auth      required    pam_wheel.so use_uid
+
+# include system account settings
+account   include     system-account
+
+# Set default environment variables for the service user
+session   required    pam_env.so
+
+# include system session settings
+session   include     system-session
+
+# End /etc/pam.d/su</literal>
+EOF</userinput></screen>
+      </sect4>
+
+      <sect4>
+        <title>'chpasswd' and 'newusers'</title>
+
+<screen role="root"><userinput>cat &gt; /etc/pam.d/chpasswd &lt;&lt; "EOF"
+<literal># Begin /etc/pam.d/chpasswd
+
+# always allow root
+auth      sufficient  pam_rootok.so
+
+# include system auth and account settings
+auth      include     system-auth
+account   include     system-account
+password  include     system-password
+
+# End /etc/pam.d/chpasswd</literal>
+EOF
+
+sed -e s/chpasswd/newusers/ /etc/pam.d/chpasswd >/etc/pam.d/newusers</userinput></screen>
+      </sect4>
+
+      <sect4>
+        <title>'chage'</title>
+
+<screen role="root"><userinput>cat &gt; /etc/pam.d/chage &lt;&lt; "EOF"
+<literal># Begin /etc/pam.d/chage
+
+# always allow root
+auth      sufficient  pam_rootok.so
+
+# include system auth and account settings
+auth      include     system-auth
+account   include     system-account
+
+# End /etc/pam.d/chage</literal>
+EOF</userinput></screen>
+      </sect4>
+
+      <sect4>
+        <title>Other shadow utilities</title>
+
+<screen role="root"><userinput>for PROGRAM in chfn chgpasswd chsh groupadd groupdel \
+               groupmems groupmod useradd userdel usermod
+do
+    &install-file; /etc/pam.d/chage /etc/pam.d/${PROGRAM}
+    sed -i "s/chage/$PROGRAM/" /etc/pam.d/${PROGRAM}
+done</userinput></screen>
+
+        <warning>
+          <para>
+            At this point, you should do a simple test to see if
+            Shadow is working as expected. Open
+            another terminal and log in as
+            <systemitem class="username">root</systemitem>, and then run
+            <command>login</command> and login as another user.  If you do
+            not see any errors, then all is well and you should proceed with
+            the rest of the configuration. If you did receive errors, stop
+            now and double check the above configuration files manually.
+            Any error is the sign of an error in the above procedure.
+            You can also run the
+            test suite from the Linux-PAM package
+            to assist you in determining the problem. If you cannot find and
+            fix the error, you should recompile
+            Shadow adding the
+            <option>--without-libpam</option> switch to the
+            <command>configure</command> command in the above instructions
+            (also move the <filename>/etc/login.defs.orig</filename> backup
+            file to <filename>/etc/login.defs</filename>). If you fail to do
+            this and the errors remain, you will be unable to log into your
+            system.
+          </para>
+        </warning>
+      </sect4>
+
+      <sect4 id="pam-access">
+        <title>Configuring Login Access</title>
+
+        <para>
+          Instead of using the <filename>/etc/login.access</filename> file for
+          controlling access to the system, Linux-PAM
+          uses the <filename class='libraryfile'>pam_access.so</filename> module
+          along with the <filename>/etc/security/access.conf</filename> file.
+          Rename the <filename>/etc/login.access</filename> file using the
+          following command:
+        </para>
+
+        <indexterm zone="shadow pam-access">
+          <primary sortas="e-etc-security-access.conf">/etc/security/access.conf</primary>
+        </indexterm>
+<!-- to editors: it is a common belief that:
+        if <condition>; then <command>; fi
+     is equivalent to:
+        <condition> && <command>
+     This is not true in bash; try:
+        ([ 0 = 1 ] && echo not reachable); echo $? # echoes 1
+     vs
+        (if [ 0 = 1 ]; then echo not reachable; fi); echo $? # echoes 0
+     So in scripts that may call subshells (for example through sudo) and
+     that need error reporting, the outcome _is_ different. In all
+     cases, for bash, the "if" form should be preferred.-->
+<screen role="root"><userinput>if [ -f /etc/login.access ]; then mv -v /etc/login.access{,.NOUSE}; fi</userinput></screen>
+      </sect4>
+
+      <sect4 id="pam-limits">
+        <title>Configuring Resource Limits</title>
+
+        <para>
+          Instead of using the <filename>/etc/limits</filename> file for
+          limiting usage of system resources,
+          Linux-PAM uses the
+          <filename class='libraryfile'>pam_limits.so</filename> module along
+          with the <filename>/etc/security/limits.conf</filename> file. Rename
+          the <filename>/etc/limits</filename> file using the following command:
+        </para>
+
+        <indexterm zone="shadow pam-limits">
+          <primary sortas="e-etc-security-limits.conf">/etc/security/limits.conf</primary>
+        </indexterm>
+
+<screen role="root"><userinput>if [ -f /etc/limits ]; then mv -v /etc/limits{,.NOUSE}; fi</userinput></screen>
+
+        <caution>
+          <para>
+          Be sure to test the login capabilities of the system before logging
+          out.  Errors in the configuration can cause a permanent
+          lockout requiring a boot from an external source to correct the
+          problem.
+          </para>
+        </caution>
+
+      </sect4>
+    </sect3>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <para>
+      A list of the installed files, along with their short descriptions can be
+      found at
+      <ulink url="&mlfs-root;/chapter08/shadow.html#contents-shadow"/>.
+    </para>
+
+  </sect2>
+
+</sect1>

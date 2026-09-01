@@ -87,21 +87,21 @@ done</userinput></screen>
       moved in place. Do so now:
     </para>
 
-<screen><userinput>cp -RT SPIRV-Headers-&vkd3d-proton-spirv;             \
+<screen><userinput>cp -RT SPIRV-Headers-&vkd3d-proton-spirv;               \
        vkd3d-proton-&vkd3d-proton-version;/khronos/SPIRV-Headers                            &amp;&amp;
-mv -T  Vulkan-Headers-*                                                   \
+mv -T  Vulkan-Headers-*                                                     \
        vkd3d-proton-&vkd3d-proton-version;/khronos/Vulkan-Headers                           &amp;&amp;
-mv -T  dxil-spirv-*                                                       \
+mv -T  dxil-spirv-*                                                         \
        vkd3d-proton-&vkd3d-proton-version;/subprojects/dxil-spirv                           &amp;&amp;
-mv -T  SPIRV-Cross-*                                                      \
+mv -T  SPIRV-Cross-*                                                        \
        vkd3d-proton-&vkd3d-proton-version;/subprojects/dxil-spirv/third_party/SPIRV-Cross   &amp;&amp;
-mv -T  SPIRV-Headers-&vkd3d-proton-spirv;             \
+mv -T  SPIRV-Headers-&vkd3d-proton-spirv;               \
        vkd3d-proton-&vkd3d-proton-version;/subprojects/dxil-spirv/third_party/spirv-headers &amp;&amp;
-mv -T  SPIRV-Tools-*                                                      \
+mv -T  SPIRV-Tools-*                                                        \
        vkd3d-proton-&vkd3d-proton-version;/subprojects/dxil-spirv/third_party/SPIRV-Tools   &amp;&amp;
-mv -T  dxbc-spirv-*                                                       \
+mv -T  dxbc-spirv-*                                                         \
        vkd3d-proton-&vkd3d-proton-version;/subprojects/dxil-spirv/subprojects/dxbc-spirv    &amp;&amp;
-mv -T  SPIRV-Headers-&vkd3d-proton-dxbc-spirv;             \
+mv -T  SPIRV-Headers-&vkd3d-proton-dxbc-spirv;               \
        vkd3d-proton-&vkd3d-proton-version;/subprojects/dxil-spirv/subprojects/dxbc-spirv/submodules/spirv_headers</userinput></screen>
 <!-- Submodules will be the death of me and alignment. -->
 

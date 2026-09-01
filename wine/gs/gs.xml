@@ -21,11 +21,12 @@
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="dav1d.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libaom.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="fdk-aac.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="mpg123.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="lame.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libvpx.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="x264.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="x265.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ffmpeg.xml"/>
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="gstreamer-suite.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="gstreamer.xml"/>
 
 </chapter>

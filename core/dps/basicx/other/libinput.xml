@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../../../general.ent">
+  %general-entities;
+
+<!--
+  <!ENTITY libinput-download "https://www.freedesktop.org/software/libinput/libinput-&libinput-version;.tar.xz">
+-->
+  <!ENTITY libinput-root "https://gitlab.freedesktop.org/libinput/libinput/-/archive">
+  <!ENTITY libinput-download
+    "&libinput-root;/&libinput-version;/libinput-&libinput-version;.tar.gz"
+>
+]>
+
+<sect1 id="libinput" xreflabel="libinput-&libinput-version;">
+  <?dbhtml filename="libinput.html"?>
+
+  <title>libinput-&libinput-version;</title>
+
+  <indexterm zone="libinput">
+    <primary sortas="a-libinput">libinput</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to libinput</title>
+
+    <para>
+      libinput is a library that handles input devices for display servers and
+      other applications that need to directly deal with input devices. Xorg
+      and Wayland compositors make heavy use of this package.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&libinput-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">libinput Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="libevdev"/> and
+      <xref linkend="mtdev"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of libinput</title>
+
+    <para>
+      Install libinput by running the following
+      commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr             \
+            --buildtype=release       \
+            -D debug-gui=false        \
+            -D tests=false            \
+            -D libwacom=false         \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+    <para>
+      If you have passed <option>-D documentation=true</option> to
+      <command>meson</command>, you can install the generated documentation
+      by running the following commands as the &root; user:
+    </para>
+
+<!-- seems the api doc is not generated because the directory is not a git
+     repository... -->
+<screen role="root"
+        remap="doc"><userinput>&install-dir; /usr/share/doc/libinput-&libinput-version;/html &amp;&amp;
+cp -rv Documentation/* /usr/share/doc/libinput-&libinput-version;/html</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D debug-gui=false</parameter>: This switch
+      disables creation of a visual debug helper for libinput. Remove this
+      switch if you want the debug helper, and you have GTK3 installed.
+    </para>
+
+    <para>
+      <parameter>-D libwacom=false</parameter>: Remove this option if you
+      have libwacom installed, or if you are installing GNOME.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          libinput
+          <!-- libinput-debug-events, libinput-list-devices, libinput-measure*,
+          libinput-record, libinput-replay Library Executables -->
+        </seg>
+        <seg>
+          libinput
+        </seg>
+        <seg>
+          /etc/libinput,
+          /usr/libexec/libinput,
+          /usr/share/libinput, and (optionally)
+          /usr/share/doc/libinput-&libinput-version;
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="libinput-prog">
+        <term><command>libinput</command></term>
+        <listitem>
+          <para>
+            is a set of tools to interface with the
+            libinput library
+          </para>
+          <indexterm zone="libinput libinput-prog">
+            <primary sortas="b-libinput-prog">libinput</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libinput-lib">
+        <term><filename class="libraryfile">libinput</filename></term>
+        <listitem>
+          <para>
+            contains API functions for handling input devices
+          </para>
+          <indexterm zone="libinput libinput-lib">
+            <primary sortas="c-libinput-lib">libinput</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

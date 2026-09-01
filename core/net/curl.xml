@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY curl-download "https://curl.se/download/curl-&curl-version;.tar.xz">
+]>
+
+<sect1 id="curl" xreflabel="cURL-&curl-version;">
+  <?dbhtml filename="curl.html"?>
+
+  <title>cURL-&curl-version;</title>
+
+  <indexterm zone="curl">
+    <primary sortas="a-cURL">cURL</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to cURL</title>
+
+    <para>
+      The cURL package contains a utility and a library used for transferring
+      files with URL syntax to any of the following protocols: DICT, FILE, FTP,
+      FTPS, GOPHER, GOPHERS, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, MQTT, POP3,
+      POP3S, RTSP, SMB, SMBS, SMTP, SMPTS, TELNET, and TFTP. Its ability to
+      both download and upload files can be incorporated into other programs to
+      support functions like streaming media.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&curl-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/curl/curl-&curl-version;-upstream_fix-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">cURL Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="libpsl"/> and
+      <xref linkend="nghttp2"/> (required for <xref linkend="rustc"/>)
+    </para>
+
+    <note>
+      <para>
+        The recommended dependencies, while not strictly required, are heavily
+        recommended to protect against super cookies which poses security
+        issues as well as to bring HTTP/2 support which some packages and sites
+        outright require.
+      </para>
+    </note>
+
+    <para role="optional">
+      <xref linkend="libidn2"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of cURL</title>
+
+<!--
+    <para>
+      First, fix a problem with a security fix:
+    </para>
+
+<screen><userinput>sed -i 's/2F 5C/%2F %5C/' scripts/wcurl</userinput></screen>
+-->
+
+    <para>
+      Install cURL by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+../configure --prefix=/usr                 \
+             --disable-static              \
+             --with-openssl                \
+             --with-ca-path=/etc/ssl/certs &amp;&amp;
+
+make</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>make install &amp;&amp;
+
+rm -rf docs/examples/.deps &amp;&amp;
+
+find docs \( -name Makefile\* -o  \
+             -name \*.1       -o  \
+             -name \*.3       -o  \
+             -name CMakeLists.txt \) -delete &amp;&amp;
+
+cp -v -R docs -T /usr/share/doc/curl-&curl-version;</userinput></screen>
+
+    <para>
+      To run some simple verification tests on the newly installed
+      <command>curl</command>, issue the following commands:
+      <command>curl --trace-ascii debugdump.txt https://www.example.com/</command>
+      and
+      <command>curl --trace-ascii d.txt --trace-time https://example.com/</command>.
+      Inspect the locally created trace files <filename>debugdump.txt</filename>
+      and <filename>d.txt</filename>, which contains version information,
+      downloaded files information, etc. One file has the time for each action logged.
+    </para>
+  </sect2>
+
+  <sect2>
+    <title>lib32 Installation of cURL</title>
+
+    <para>
+      Install lib32-cURL by running the following commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+CC="gcc -m32" CXX="g++ -m32"           \
+PKGCONFIG=i686-pc-linux-gnu-pkg-config \
+../configure --prefix=/usr             \
+             --libdir=/usr/lib32       \
+             --host=i686-pc-linux-gnu  \
+             --disable-static          \
+             --with-openssl            \
+             --without-brotli          \
+             --with-ca-path=/etc/ssl/certs &amp;&amp;
+
+make</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>make DESTDIR=$PWD/DESTDIR install     &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-subconfigure;
+
+    <para>
+      <command>mkdir build &amp;&amp; cd build</command>: This is not necessary
+      for just the normal installation, but cleaning the directory leads to the
+      documentation in the source being wiped and this package tries to rebuild
+      it for the lib32 installation, so building in a build directory allows
+      for deleting just the build artifacts.
+    </para>
+
+    &static-libraries;
+
+    <para>
+      <parameter>--with-ca-path=/etc/ssl/certs</parameter>: This
+      switch sets the location of the BLFS Certificate Authority store.
+    </para>
+
+    <para>
+      <parameter>--with-openssl</parameter>: This parameter chooses
+      OpenSSL as SSL/TLS implementation.
+      This option is not needed if <option>--with-gnutls</option> is
+      selected instead.
+    </para>
+
+    <para>
+      <option>--with-gssapi</option>: This parameter adds
+      Kerberos 5 support to
+      <filename class="libraryfile">libcurl</filename>.
+    </para>
+
+    <para>
+      <option>--with-gnutls</option>: Use this switch to
+      build with GnuTLS support
+      instead of OpenSSL for SSL/TLS. This requires
+      <xref linkend="gnutls"/> to be installed already.
+    </para>
+
+    <para>
+      <option>--with-ca-bundle=/etc/pki/tls/certs/ca-bundle.crt</option>: Use
+      this switch instead of <parameter>--with-ca-path</parameter> if
+      building with GnuTLS support
+      instead of OpenSSL for SSL/TLS.
+    </para>
+
+    <para>
+      <option>--with-libssh2</option>: This parameter adds
+      SSH support to cURL. This is disabled
+      by default.
+    </para>
+
+    <para>
+      <option>--enable-ares</option>: This parameter adds support for DNS
+      resolution through the c-ares library.
+    </para>
+
+    <para>
+      <command>find docs ... -exec rm {} \;</command>: This command removes
+      <filename>Makefiles</filename> and man files from the documentation
+      directory that would otherwise be installed by the commands that follow.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Library</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+           curl, curl-config, and wcurl
+        </seg>
+        <seg>
+           libcurl
+        </seg>
+        <seg>
+          /usr/include/curl and
+          /usr/share/doc/curl-&curl-version;
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="curl-prog">
+        <term><command>curl</command></term>
+        <listitem>
+         <para>
+           is a command line tool for transferring files with URL syntax
+         </para>
+          <indexterm zone="curl curl-prog">
+            <primary sortas="b-curl">curl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="curl-config">
+        <term><command>curl-config</command></term>
+        <listitem>
+          <para>
+            prints information about the last compile, like libraries
+            linked to and prefix setting
+          </para>
+          <indexterm zone="curl curl-config">
+            <primary sortas="b-curl-config">curl-config</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="wcurl">
+        <term><command>wcurl</command></term>
+        <listitem>
+         <para>
+           is a wrapper around cURL that emulates wget behavior
+         </para>
+          <indexterm zone="curl wcurl">
+            <primary sortas="b-wcurl">wcurl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libcurl">
+        <term><filename class="libraryfile">libcurl</filename></term>
+        <listitem>
+          <para>
+            provides the API functions required by
+            <command>curl</command> and other programs
+          </para>
+          <indexterm zone="curl libcurl">
+            <primary sortas="c-libcurl">libcurl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+  "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+ <!ENTITY % general-entities SYSTEM "../../general.ent">
+ %general-entities;
+]>
+
+<chapter id="net">
+  <?dbhtml filename="net.html"?>
+
+  <title>Networking</title>
+
+  <para>
+    This chapter covers networking dependencies and setup that
+    packages later in this book may depend on or are useful in their own right.
+  </para>
+
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="icu.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libxml2.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nghttp2.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libtasn1.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nspr.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nss.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="p11-kit.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="make-ca.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libunistring.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libidn2.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libpsl.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="curl.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="wget.xml"/>
+
+</chapter>

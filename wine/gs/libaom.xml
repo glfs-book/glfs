@@ -38,6 +38,7 @@
       </listitem>
     </itemizedlist>
 
+<!--
     <bridgehead renderas="sect3">Additional Downloads</bridgehead>
     <itemizedlist spacing="compact">
       <listitem>
@@ -47,6 +48,7 @@
         </para>
       </listitem>
     </itemizedlist>
+-->
 
     <bridgehead renderas="sect3">libaom Dependencies</bridgehead>
 
@@ -59,6 +61,7 @@
   <sect2 role="installation">
     <title>Installation of libaom</title>
 
+<!--
     <para>
       First, ensure libaom gets every bit of info it needs from NASM to
       prevent a configuration issue as a result of NASM updating how the help
@@ -66,25 +69,28 @@
     </para>
 
 <screen><userinput remap="pre">patch -Np1 -i ../libaom-&libaom-version;-nasm3-1.patch</userinput></screen>
+-->
 
     <para>
       Next, prevent libaom from installing static libraries:
     </para>
 
-<screen><userinput remap="pre">sed -i 's/aom aom_static/aom/' build/cmake/aom_install.cmake</userinput></screen>
+<screen><userinput remap="pre">sed -i 's/aom aom_static/aom/' cmake/aom_install.cmake</userinput></screen>
 
     <para>
       Install libaom by running the following
       commands:
     </para>
 
-<screen><userinput>mkdir aom-build &amp;&amp;
-cd    aom-build &amp;&amp;
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
 
 cmake -D CMAKE_INSTALL_PREFIX=/usr \
       -D CMAKE_BUILD_TYPE=Release  \
-      -D BUILD_SHARED_LIBS=1       \
-      -D ENABLE_DOCS=no            \
+      -D BUILD_SHARED_LIBS=ON      \
+      -D ENABLE_EXAMPLES=OFF       \
+      -D ENABLE_TESTS=OFF          \
+      -D ENABLE_DOCS=OFF           \
       -G Ninja .. &amp;&amp;
 
 ninja</userinput></screen>
@@ -111,8 +117,10 @@ PKG_CONFIG_PATH=/usr/lib32/pkgconfig \
 cmake -D CMAKE_INSTALL_PREFIX=/usr   \
       -D CMAKE_INSTALL_LIBDIR=lib32  \
       -D CMAKE_BUILD_TYPE=Release    \
-      -D BUILD_SHARED_LIBS=1         \
-      -D ENABLE_DOCS=no              \
+      -D BUILD_SHARED_LIBS=ON        \
+      -D ENABLE_EXAMPLES=OFF         \
+      -D ENABLE_TESTS=OFF            \
+      -D ENABLE_DOCS=OFF             \
       -G Ninja .. &amp;&amp;
 
 ninja</userinput></screen>
@@ -134,14 +142,23 @@ ldconfig</userinput></screen>
     &options-cmake;
 
     <para>
-      <parameter>-D BUILD_SHARED_LIBS=1</parameter>: This switch builds shared
+      <parameter>-D BUILD_SHARED_LIBS=ON</parameter>: This switch builds shared
       versions of the libraries.
     </para>
 
     <para>
-      <parameter>-D ENABLE_DOCS=no</parameter>: This switch disables building
-      the documentation because doxygen is not
-      installed.
+      <parameter>-D ENABLE_EXAMPLES=OFF</parameter>: This switch disables
+      building examples, which can take a while to build.
+    </para>
+
+    <para>
+      <parameter>-D ENABLE_TESTS=OFF</parameter>: This switch disables
+      building the test suite, which can take a while to build.
+    </para>
+
+    <para>
+      <parameter>-D ENABLE_DOCS=OFF</parameter>: This switch disables building
+      the documentation because Doxygen may not be installed, yet.
     </para>
 
   </sect2>
@@ -156,7 +173,7 @@ ldconfig</userinput></screen>
 
       <seglistitem>
         <seg>
-          aomdec and aomenc
+          None
         </seg>
         <seg>
           libaom
@@ -172,6 +189,7 @@ ldconfig</userinput></screen>
       <?dbfo list-presentation="list"?>
       <?dbhtml list-presentation="table"?>
 
+<!--
       <varlistentry id="aomdec">
         <term><command>aomdec</command></term>
         <listitem>
@@ -197,6 +215,7 @@ ldconfig</userinput></screen>
           </indexterm>
         </listitem>
       </varlistentry>
+-->
 
       <varlistentry id="libaom-lib">
         <term><filename class="libraryfile">libaom</filename></term>

@@ -76,8 +76,9 @@
 <screen><userinput>mkdir build &amp;&amp;
 cd    build &amp;&amp;
 
-meson setup --prefix=/usr       \
-            --buildtype=release \
+meson setup --prefix=/usr          \
+            --buildtype=release    \
+            --wrap-mode=nofallback \
             .. &amp;&amp;
 
 ninja</userinput></screen>
@@ -99,9 +100,10 @@ ninja</userinput></screen>
     </para>
 
 <screen><userinput>rm -rf * &amp;&amp;
-meson setup --prefix=/usr       \
-            --buildtype=release \
-            --cross-file=lib32  \
+meson setup --prefix=/usr          \
+            --buildtype=release    \
+            --cross-file=lib32     \
+            --wrap-mode=nofallback \
             .. &amp;&amp;
 ninja</userinput></screen>
 

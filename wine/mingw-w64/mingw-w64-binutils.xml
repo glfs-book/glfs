@@ -6,7 +6,7 @@
 
   <!ENTITY binutils-root "https://sourceware.org/pub/binutils/releases">
   <!ENTITY mingw-w64-binutils-download
-    "&binutils-root;/binutils-with-gold-&binutils-version;.tar.xz">
+    "&binutils-root;/binutils-&binutils-version;.tar.xz">
 ]>
 
 <sect1 id="mingw-w64-binutils" xreflabel="MinGW-w64-Binutils-&binutils-version;">
@@ -141,7 +141,7 @@ rm -rf DESTDIR</userinput></screen>
       <command>rm -v DESTDIR/usr/lib/bfd-plugins/libdep.so</command>:
       This command removes an library that conflicts with the original library
       provided by the original compilation of
-      <ulink url="&mlfs-m32-root;/chapter08/binutils.html">Binutils</ulink>.
+      <ulink url="&mlfs-root;/chapter08/binutils.html">Binutils</ulink>.
     </para>
 
   </sect2>
@@ -187,7 +187,7 @@ rm -rf DESTDIR</userinput></screen>
     <para>
       Only binutils specific to MinGW-w64
       will be explained. For the rest, see
-      <ulink url="&mlfs-m32-root;/chapter08/binutils.html">
+      <ulink url="&mlfs-root;/chapter08/binutils.html">
       Binutils</ulink>.
     </para>
 

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY nv-va-dri-archive
+    "https://github.com/elFarto/nvidia-vaapi-driver/archive">
+  <!ENTITY nv-va-dri-root
+    "&nv-va-dri-archive;/v&nvidia-vaapi-driver-version;">
+  <!ENTITY nvidia-vaapi-driver-download
+    "&nv-va-dri-root;/nvidia-vaapi-driver-&nvidia-vaapi-driver-version;.tar.gz">
+]>
+
+<sect1 id="nvidia-vaapi-driver" xreflabel="NVIDIA-VA-API-Driver-&nvidia-vaapi-driver-version;">
+  <?dbhtml filename="nvidia-vaapi-driver.html"?>
+
+  <title>NVIDIA-VA-API-Driver-&nvidia-vaapi-driver-version;</title>
+
+  <indexterm zone="nvidia-vaapi-driver">
+    <primary sortas="a-nvidia-vaapi-driver">NVIDIA-VA-API-Driver</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to NVIDIA-VA-API-Driver</title>
+
+    <para>
+      The NVIDIA-VA-API-Driver package provides a VA-API driver for NVIDIA,
+      using NVDEC under the hood without requiring the
+      CUDA <command>nvcc</command> compiler. It doesn't provide encoding
+      support, but provides decoding support for various codecs.
+    </para>
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&nvidia-vaapi-driver-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">NVIDIA-VA-API-Driver Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="libdrm"/>,
+      <xref linkend="libva"/>,
+      <xref linkend="nv-codec-headers"/>, and
+      &opengl;
+    </para>
+
+    <para role="recommended">
+      <xref linkend="gstreamer"/> (Required for VP9 codec support, often
+      used for streaming sites like YouTube and Twitch)
+    </para>
+
+    <para role="optional">
+      &nvidia; (the runfile's open kernel module files for
+      header regeneration)
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of NVIDIA-VA-API-Driver</title>
+
+    <para>
+      Install NVIDIA-VA-API-Driver by running the following
+      commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr --buildtype=release .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of lib32-NVIDIA-VA-API-Driver</title>
+
+    <para>
+      Install lib32-NVIDIA-VA-API-Driver by running the following
+      commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr            \
+            --buildtype=release      \
+            --cross-file=lib32       \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install    &amp;&amp;
+cp -Rv DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed VA-API drivers</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          None
+        </seg>
+        <seg>
+          nvidia_drv_video (in /usr/lib/dri)
+        </seg>
+        <seg>
+          None
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="nvidia_drv_video">
+        <term><filename class="libraryfile">nvidia_drv_video</filename></term>
+        <listitem>
+          <para>
+            is the NVIDIA VA-API driver using NVDEC under the hood
+          </para>
+          <indexterm zone="nvidia-vaapi-driver nvidia_drv_video">
+            <primary sortas="c-nvidia_drv_video">nvidia_drv_video</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+</sect1>

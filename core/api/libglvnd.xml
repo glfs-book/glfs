@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY libglvnd-root "https://gitlab.freedesktop.org/glvnd/libglvnd/-/archive">
+  <!ENTITY libglvnd-download
+    "&libglvnd-root;/v&libglvnd-version;/libglvnd-v&libglvnd-version;.tar.gz">
+]>
+
+<sect1 id="libglvnd" xreflabel="libglvnd-&libglvnd-version;">
+  <?dbhtml filename="libglvnd.html"?>
+
+  <title>libglvnd-&libglvnd-version;</title>
+
+  <indexterm zone="libglvnd">
+    <primary sortas="a-glvnd">libglvnd</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to libglvnd</title>
+
+    <para>
+      The libglvnd package dispatches OpenGL API calls to a given driver vendor
+      at runtime. Some of the libraries are simply wrappers to the main
+      dispatcher. Drivers that are built with libglvnd in mind provide their
+      own OpenGL functionality. For <xref linkend="mesa"/>, it will install
+      <filename class="libraryfile">libEGL_mesa</filename> and <filename
+      class="libraryfile">libGLX_mesa</filename>. For NVIDIA,
+      it will provide <filename class="libraryfile">libEGL_nvidia</filename>,
+      <filename class="libraryfile">libGLX_nvidia</filename>, and others. Each
+      implementation is specific to the driver it comes from. The benefit of
+      doing it this way is that a driver doesn't have to obey to the
+      architecture an OpenGL vendor uses, nor does it have to be absorbed by
+      the vendor.
+    </para>
+
+    <important><para>
+      If you've come here from the BLFS Mesa page, please read <xref
+      linkend="aboutgl"/> for information regarding how to navigate BLFS,
+      compatibility, and transitioning.
+    </para></important>
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&libglvnd-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/libglvnd/libglvnd-v&libglvnd-version;-ext_device-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">libglvnd Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="xorg7-lib"/>
+      <footnote><para>
+        If <xref linkend="xorg7-lib"/> is not installed, this package will not
+        provide <filename class="libraryfile">libGL</filename> or <filename
+        class="libraryfile">libGLX</filename>. <filename
+        class="libraryfile">libOpenGL</filename> will still be built. Many
+        build systems will expect <filename
+        class="libraryfile">libGL</filename> to be present, so it is heavily
+        recommended to install <xref linkend="xorg7-lib"/> before installing
+        this package.
+      </para></footnote>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of libglvnd</title>
+
+    <para>
+      Some non-Mesa drivers will expose one or two EGL device extensions from
+      <literal>EGL_EXT_device_base</literal>,
+      <literal>EGL_EXT_device_enumeration</literal>, and
+      <literal>EGL_EXT_device_query</literal>. Some packages require that all
+      three extensions are present, although historically
+      <literal>base</literal> proves that <literal>enumeration</literal> and
+      <literal>query</literal> is possible, since the latter two are newer
+      extensions that separate the former into two. Apply a patch to make
+      libglvnd advertise all three if one is present:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../libglvnd-v&libglvnd-version;-ext_device-1.patch</userinput></screen>
+
+    <para>
+      Install libglvnd by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            -D hgl=false        \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of libglvnd</title>
+
+    <para>
+      Install lib32-libglvnd by running the following commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            --cross-file=lib32  \
+            -D hgl=false        \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now as the &root; user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install    &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D hgl=false</parameter>: This disables targeting Haiku by
+      default as this guide is for Linux, not Haiku.
+    </para>
+
+    <para>
+      <option>-D gles1=false</option>: If you don't need the older version of
+      OpenGL ES, use this option. Some games use GLESv1 still.
+    </para>
+
+    <para>
+      <option>-D gles2=false</option>: If you don't need OpenGL ES, use
+      this option.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>None</seg>
+        <seg>
+          libEGL,
+          libGL,
+          libGLESv1_CM,
+          libGLESv2,
+          libGLX,
+          libGLdispatch, and
+          libOpenGL
+        </seg>
+        <seg>
+          /usr/include/{EGL,GL,GLES{,2,3},glvnd,KHR}
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="glvnd-libEGL">
+        <term><filename class="libraryfile">libEGL</filename></term>
+        <listitem>
+          <para>
+            contains EGL window-system API functions
+          </para>
+          <indexterm zone="libglvnd glvnd-libEGL">
+            <primary sortas="b-glvnd-libEGL">libEGL</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glvnd-libGL">
+        <term><filename class="libraryfile">libGL</filename></term>
+        <listitem>
+          <para>
+            is the OpenGL library tied to GLX; wrapper library
+            calling <filename class="libraryfile">libGLdispatch
+            </filename> and <filename class="libraryfile">libGLX</filename>
+          </para>
+          <indexterm zone="libglvnd glvnd-libGL">
+            <primary sortas="b-glvnd-libGL">libGL</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glvnd-libGLESv1_CM">
+        <term><filename class="libraryfile">libGLESv1_CM</filename></term>
+        <listitem>
+          <para>
+            exposes the OpenGL ES 1.x common profile entrypoints;
+            wrapper library calling <filename
+            class="libraryfile">libGLdispatch</filename>
+          </para>
+          <indexterm zone="libglvnd glvnd-libGLESv1_CM">
+            <primary sortas="b-glvnd-libGLESv1_CM">libGLESv1_CM</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glvnd-libGLESv2">
+        <term><filename class="libraryfile">libGLESv2</filename></term>
+        <listitem>
+          <para>
+            exposes OpenGL ES 2.x and 3.x entrypoints; v2 and up removed
+            profiles, which is why <filename
+            class="libraryfile">libGLESv1_CM</filename> contains
+            <literal>_CM</literal> but this library doesn't; wrapper library
+            calling <filename
+            class="libraryfile">libGLdispatch</filename>
+          </para>
+          <indexterm zone="libglvnd glvnd-libGLESv2">
+            <primary sortas="b-glvnd-libGLESv2">libGLESv2</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glvnd-libGLX">
+        <term><filename class="libraryfile">libGLX</filename></term>
+        <listitem>
+          <para>
+            dispatches GLX extensions to the right vendor
+          </para>
+          <indexterm zone="libglvnd glvnd-libGLX">
+            <primary sortas="b-glvnd-libGLX">libGLX</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glvnd-libGLdispatch">
+        <term><filename class="libraryfile">libGLdispatch</filename></term>
+        <listitem>
+          <para>
+            dispatches OpenGL and TLS to the right vendor
+          </para>
+          <indexterm zone="libglvnd glvnd-libGLdispatch">
+            <primary sortas="b-glvnd-libGLdispatch">libGLdispatch</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="glvnd-libOpenGL">
+        <term><filename class="libraryfile">libOpenGL</filename></term>
+        <listitem>
+          <para>
+            is the OpenGL library untied to any window system and exposes
+            OpenGL entrypoints; wrapper library calling <filename
+            class="libraryfile"> libGLdispatch</filename>
+          </para>
+          <indexterm zone="libglvnd glvnd-libOpenGL">
+            <primary sortas="b-glvnd-libOpenGL">libOpenGL</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

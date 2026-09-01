@@ -80,7 +80,7 @@
   <para role="recommended"><itemizedlist spacing="compact">
     <listitem>
       <para>
-        <xref linkend="gstreamer-suite"/>: Allows consuming and working with
+        <xref linkend="gstreamer"/>: Allows consuming and working with
         multimedia such as music and videos. Most games and some software
         work without it, although some will need it for WMA decoding.
       </para>
@@ -108,7 +108,7 @@
     <ulink url="&blfs-svn;/postlfs/mitkrb.html">Kerberos</ulink>,
     <ulink url="https://archlinux.org/packages/extra/x86_64/smbclient/">
     smbclient</ulink>,
-    <xref linkend="ocl-icd"/>,
+    <xref linkend="opencl-sdk"/>,
     <ulink url="&blfs-svn;/basicnet/libpcap.html">libpcap</ulink>,
     <ulink url="&blfs-svn;/general/libusb.html">libusb</ulink>, and
     <ulink url="&blfs-svn;/multimedia/v4l-utils.html">v4l-utils</ulink>

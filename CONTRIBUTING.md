@@ -128,9 +128,9 @@ directories at the root of the source:
 
 - `appendices/`
 - `book/`
+- `core/`
 - `introduction/`
 - `qol/`
-- `shareddeps/`
 - `steam/`
 - `wine/`
 - `changelog.xml` (link to `introduction/welcome/changelog.xml`)
@@ -147,16 +147,16 @@ to get updated.
 #### 3.1.2.2. `book/`
 This directory contains XML files rendered at the beginning of the book. Rarely
 needs to get updated.
-#### 3.1.2.3. `introduction/`
+#### 3.1.2.3. `core/`
+This directory contains XML files rendered for the Core Components section
+of the book. Contains packages.
+#### 3.1.2.4. `introduction/`
 This directory contains XML files rendered for the Introduction section of the
 book. Contains `welcome/changelog.xml` which does need to get updated often.
 Rest of the XML files usually don't.
-#### 3.1.2.4. `qol/`
+#### 3.1.2.5. `qol/`
 This directory contains XML files rendered for the QOL section of the book.
 Rarely needs to get updated.
-#### 3.1.2.5. `shareddeps/`
-This directory contains XML files rendered for the Shared Dependencies section
-of the book. Contains packages.
 #### 3.1.2.6. `steam/`
 This directory contains XML files rendered for the Steam section of the book.
 Contains packages.

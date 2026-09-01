@@ -1,0 +1,25 @@
+Submitted By:            Zeckma <zeckma_DOT_tech_AT_gmail_DOT_com>
+Date:                    2026-05-12
+Initial Package Version: 16.1.0
+Upstream Status:         Applied
+Origin:                  https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=51024c6ba50144a750574fc66b108f13c43d9e43
+Description:             This patch ensures symbols are quoted for Intel
+                         syntaxed assembly which is generated from C/C++.
+                         `x86_64-w64-mingw32-gcc -masm=intel` is needed to
+                         replicate errors. Most assembly using intel syntax
+                         is compiled via NASM, but there can be some outliers.
+
+diff '--color=auto' -Naurp gcc-16.1.0.orig/gcc/config/mingw/winnt.cc gcc-16.1.0/gcc/config/mingw/winnt.cc
+--- gcc-16.1.0.orig/gcc/config/mingw/winnt.cc	2026-05-12 18:10:19.863384572 -0600
++++ gcc-16.1.0/gcc/config/mingw/winnt.cc	2026-05-12 18:11:32.488298205 -0600
+@@ -860,7 +860,9 @@ mingw_pe_file_end (void)
+ 			   "\t.p2align\t3, 0\n"
+ 	  		   "\t.globl\t%s\n"
+ 			   "\t.linkonce\tdiscard\n", oname, oname);
+-	  fprintf (asm_out_file, "%s:\n\t.quad\t%s\n", oname, name);
++	  fprintf (asm_out_file, "%s:\n\t.quad\t", oname);
++	  ASM_OUTPUT_LABELREF (asm_out_file, name);
++	  fputc ('\n', asm_out_file);
+ 	}
+     }
+ }

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY nv-codec-headers-download
+    "https://github.com/FFmpeg/nv-codec-headers/releases/download/n&nv-codec-headers-version;/nv-codec-headers-&nv-codec-headers-version;.tar.gz">
+]>
+
+<sect1 id="nv-codec-headers" xreflabel="nv-codec-headers-&nv-codec-headers-version; (ffnvcodec)">
+  <?dbhtml filename="nv-codec-headers.html"?>
+
+  <title>nv-codec-headers-&nv-codec-headers-version; (ffnvcodec)</title>
+
+  <indexterm zone="nv-codec-headers">
+    <primary sortas="a-nv-codec-headers">nv-codec-headers (ffnvcodec)</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to nv-codec-headers</title>
+
+    <para>
+      The nv-codec-headers package provides headers for interacting
+      with NVIDIA codec APIs. This package also goes by the name of ffnvcodec.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&nv-codec-headers-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of nv-codec-headers</title>
+
+    <para>
+      Install nv-codec-headers by running the following
+      command as the &root; user:
+    </para>
+
+<screen role="root"><userinput>make PREFIX=/usr LIBDIR=share install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          None
+        </seg>
+        <seg>
+          None
+        </seg>
+        <seg>
+          /usr/include/ffnvcodec
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+  </sect2>
+
+</sect1>

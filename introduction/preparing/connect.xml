@@ -11,18 +11,18 @@
   <title>Connecting to the Internet</title>
 
   <para>
-    Some of the instructions in GLFS require an internet connection, namely in
-    <xref linkend="rustc"/> and when downloading all the files for a package
-    bundle like <xref linkend="llvm"/> and <xref linkend="vulkan-sdk"/>. Thus,
-    you will need an internet connection on the LFS target, whether in a
-    chroot, TTY, or GUI. Tools for downloading files will be installed in GLFS.
+    Some of the instructions in GLFS require a network connection to the
+    Internet, namely in <xref linkend="rustc"/> and when downloading all the
+    files for a package bundle like <xref linkend="vulkan-sdk"/>. Thus, you
+    will need a network connection on the LFS target, whether in a chroot, TTY,
+    or GUI. Tools for downloading files will be installed in GLFS.
   </para>
 
   <para>
     The LFS book covers setting up networking by connecting to a LAN
     with a static IP address. There are other methods used to obtain
     an IP address and connect to a LAN and other networks (such as
-    the internet). The most popular method is DHCP.
+    the Internet). The most popular method is DHCP.
   </para>
 
   <para>
@@ -44,7 +44,7 @@
       how to set up both.
     </para>
 
-    <para revision="sysv">
+    <para revision="openrc,sysv">
       In order to use DHCP, you will need a DHCP client,
       <ulink url="&blfs-svn;/basicnet/dhcpcd.html">
       dhcpcd</ulink>. 
@@ -52,11 +52,11 @@
 
     <para>
       You may also be wanting to connect to the
-      internet wirelessly. In order to do that, you should first
+      Internet wirelessly. In order to do that, you should first
       configure the kernel to support that, the instructions for
       that are
       <ulink url="&blfs-svn;/basicnet/wireless-kernel.html">here</ulink>.
-      After that, you will need a tool to connect to the internet, suitable
+      After that, you will need a tool to connect to the Internet, suitable
       ones being
       <ulink url="&blfs-svn;/basicnet/iw.html">iw</ulink>,
       <ulink url="&blfs-svn;/basicnet/wireless_tools.html">

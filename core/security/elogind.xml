@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY elogind-root     "https://github.com/elogind/elogind/archive">
+  <!ENTITY elogind-download "&elogind-root;/v&elogind-version;/elogind-&elogind-version;.tar.gz">
+]>
+
+<sect1 id="elogind" revision="openrc,sysv" xreflabel="elogind-&elogind-version;">
+  <?dbhtml filename="elogind.html"?>
+
+  <title>elogind-&elogind-version;</title>
+
+  <indexterm zone="elogind">
+    <primary sortas="a-elogind">elogind</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to elogind</title>
+
+    <para>
+      The elogind package is an extracted "logind" from Systemd, including the
+      daemon and some other Systemd projects like UserDB. It integrates with
+      <xref linkend="linux-pam"/> to track all the users logged in to a system,
+      and whether they are logged in graphically, on the console, or remotely.
+      It exposes this information via the standard org.freedesktop.login1 D-Bus
+      interface, and also through the file system using Systemd's standard
+      <filename class="directory">/run/systemd</filename> layout.
+    </para>
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&elogind-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <bridgehead renderas="sect3" revision="openrc">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact" revision="openrc">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/elogind/elogind-&elogind-version;-openrc-user.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">elogind Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref role="runtime" revision="openrc,sysv" linkend="dbus-pass1"/>
+      (runtime),
+      <xref linkend="linux-pam"/><phrase revision="openrc,sysv">,</phrase> and
+      <xref role="runtime" linkend="polkit"/> (runtime)
+    </para>
+
+  </sect2>
+
+  <sect2 role="kernel" id="elogind-kernel">
+    <title>Kernel Configuration</title>
+
+    <para>
+      Enable the following options in the kernel configuration and recompile the
+      kernel if necessary:
+    </para>
+
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude"
+      href="elogind-kernel.xml"/>
+
+    <indexterm zone="elogind elogind-kernel">
+      <primary sortas="d-elogind">elogind</primary>
+    </indexterm>
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of elogind</title>
+
+<!--
+    <para revision="openrc">
+      There is special handling for <literal>openrc-user</literal>, a helper of
+      OpenRC that handles user services, that breaks functionality claiming
+      necessary variables are unset. Fix that behavior:
+    </para>
+
+<screen revision="openrc"><userinput>patch -Np1 -i ../elogind-&elogind-version;-openrc-user.patch</userinput></screen>
+-->
+
+    <para>
+      Install elogind by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr                          \
+            --buildtype=release                    \
+            -D docdir=/usr/share/doc/elogind-&elogind-version; \
+            -D cgroup-controller=elogind           \
+            -D dev-kvm-mode=0660                   \
+            -D dbuspolicydir=/etc/dbus-1/system.d  \
+            .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install                                           &amp;&amp;
+ln -sfv  libelogind.pc /usr/lib/pkgconfig/libsystemd.pc &amp;&amp;
+ln -sfvn elogind /usr/include/systemd</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of elogind</title>
+
+    <para>
+      Install lib32-elogind by running the following
+      commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr                         \
+            --buildtype=release                   \
+            --cross-file=lib32                    \
+            -D cgroup-controller=elogind          \
+            -D dev-kvm-mode=0660                  \
+            -D dbuspolicydir=/etc/dbus-1/system.d \
+            .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install                       &amp;&amp;
+cp -vR DESTDIR/usr/lib32/* /usr/lib32                    &amp;&amp;
+rm -rf DESTDIR                                           &amp;&amp;
+ln -sfv libelogind.pc /usr/lib32/pkgconfig/libsystemd.pc &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    <!--
+    <para>
+      <command>sed ... meson.build</command>: This change allows the
+      package to be built without polkit being installed (it is still a
+      runtime dependency) but able to use polkit after that package is
+      installed.
+    </para>
+
+    <para>
+      <command>sed ... src/login/logind.c</command>: This change allows the
+      elogind daemon to exit when it is disconnected from dbus (for example
+      when dbus is killed).
+    </para>
+    -->
+    <para>
+      <parameter>-D docdir=/usr/share/doc/elogind-&elogind-version;</parameter>:
+      This is needed to install documentation in a versioned directory.
+    </para>
+
+    <para>
+      <parameter>-D cgroup-controller=elogind</parameter>: This switch is
+      necessary to build this package when the kernel is not built with
+      <option>CONFIG_CGROUPS</option> enabled.  Note that
+      elogind strictly needs
+      a kernel with <option>CONFIG_CGROUPS</option> enabled at runtime,
+      but this switch will allow building the package first.
+    </para>
+
+    <para>
+      <parameter>-D dbuspolicydir=/etc/dbus-1/system.d</parameter>: This switch
+      sets the location of the D-Bus policy
+      directory.
+    </para>
+
+    <para>
+      <parameter>-D dev-kvm-mode=0660</parameter>: The LFS udev rule sets the
+      mode of <filename class='devicefile'>/dev/kvm</filename> to 0660.
+      This option ensures the elogind udev rules consistent with the LFS
+      configuration.
+    </para>
+
+    <para>
+      <option>-D default-kill-user-processes=false</option>: Determines whether
+      the processes of a user should be killed when the user logs out. The
+      default is <emphasis>true</emphasis>, but this defeats the traditional
+      use of <command>screen</command> or <command>tmux</command>. This can
+      also be changed in the configuration file (see below).
+    </para>
+
+    <para>
+      <command>ln -s ...</command>: These commands install symlinks so that
+      software packages can find the systemd-compatible library and headers.
+    </para>
+
+  </sect2>
+
+  <sect2 role="configuration">
+  <title>Configuring elogind</title>
+
+    <sect3 id="elogind-config">
+      <title>Config File</title>
+      <para>
+        <filename>/etc/elogind/logind.conf</filename>
+      </para>
+
+      <indexterm zone="elogind elogind-config">
+        <primary
+        sortas="e-etc-elogind-logind.conf">/etc/elogind/logind.conf</primary>
+      </indexterm>
+    </sect3>
+
+    <sect3><title>Configuration Information</title>
+
+      <para>
+        The installed file <filename>/etc/elogind/logind.conf</filename>
+        contains all the possible options with their defaults, commented
+        out. You may wish to disable automatically killing user processes when
+        the user logs out. You can do so as the &root; user:
+      </para>
+
+<screen role="root"><userinput>sed -e '/\[Login\]/a KillUserProcesses=no' \
+    -i /etc/elogind/logind.conf</userinput></screen>
+
+      <para>
+        Each user will need to register a user session using
+        Linux-PAM at login. The
+        <filename>/etc/pam.d/system-session</filename> file needs to
+        be modified and a new file must be created in order for
+        <command>elogind</command> to work correctly. Run the following
+        commands as the <systemitem class="username">root</systemitem> user:
+      </para>
+
+<screen role="root"><userinput>cat &gt;&gt; /etc/pam.d/system-session &lt;&lt; "EOF" &amp;&amp;
+<literal># Begin elogind addition
+
+session  required    pam_loginuid.so
+session  optional    pam_elogind.so
+
+# End elogind addition</literal>
+EOF
+cat &gt; /etc/pam.d/elogind-user &lt;&lt; "EOF"
+<literal># Begin /etc/pam.d/elogind-user
+
+account  required    pam_access.so
+account  include     system-account
+
+session  required    pam_env.so
+session  required    pam_limits.so
+session  required    pam_unix.so
+session  required    pam_loginuid.so
+session  optional    pam_keyinit.so force revoke
+session  optional    pam_elogind.so
+
+auth     required    pam_deny.so
+password required    pam_deny.so
+
+# End /etc/pam.d/elogind-user</literal>
+EOF</userinput></screen>
+
+    <para>
+      This package provides a Name Service Switch (NSS) module. Previously,
+      a Systemd-less system didn't have a dedicated NSS module used for better
+      name resolution, while Systemd systems have one that is tightly ingrained
+      with that software suite. Now, such a module is provided. In order to use
+      it, the <filename>/etc/nsswitch.conf</filename> file that was installed
+      in LFS must be altered. Overwrite the file as the &root; user:
+    </para>
+
+<screen role="root"><userinput>cat &gt; /etc/nsswitch.conf &lt;&lt; "EOF" &amp;&amp;
+<literal># Begin /etc/nsswitch.conf
+
+passwd: files elogind
+group: files elogind
+shadow: files elogind
+
+hosts: files dns
+networks: files
+
+protocols: files
+services: files
+ethers: files
+rpc: files
+
+# End /etc/nsswitch.conf</literal>
+EOF</userinput></screen>
+
+    <note><para>
+      The <literal>myhostname</literal>, <literal>mymachines</literal>, and
+      <literal>resolve</literal> NSS modules are still not provided (they come
+      from Systemd). The installed file cannot use them yet.
+    </para></note>
+
+    <note>
+      <para>Now continue on until you reach <xref linkend="dbus"/>,
+      install it, and follow the configuration instructions on that page to see
+      if elogind is working properly.</para>
+    </note>
+
+    </sect3>
+  </sect2>
+
+  <sect2 role="content" revision="openrc,sysv">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Library</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          busctl,
+          elogind-inhibit,
+          loginctl,
+          userdbctl, and
+          varlinkctl
+        </seg>
+        <seg>
+          libelogind and libnss_elogind
+        </seg>
+        <seg>
+          /usr/lib/elogind,
+          /etc/elogind,
+          /usr/include/elogind, and
+          /usr/share/doc/elogind-&elogind-version;
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="busctl">
+        <term><command>busctl</command></term>
+        <listitem>
+          <para>
+            is used to introspect and monitor the D-Bus bus
+          </para>
+          <indexterm zone="elogind busctl">
+            <primary sortas="b-busctl">busctl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="elogind-inhibit">
+        <term><command>elogind-inhibit</command></term>
+        <listitem>
+          <para>
+            is used to execute a program with a shutdown, sleep or idle
+            inhibitor lock taken
+          </para>
+          <indexterm zone="elogind elogind-inhibit">
+            <primary sortas="b-elogind-inhibit">elogind-inhibit</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="loginctl">
+        <term><command>loginctl</command></term>
+        <listitem>
+          <para>
+            is used to introspect and control the state of the elogind Login
+            Manager
+          </para>
+          <indexterm zone="elogind loginctl">
+            <primary sortas="b-loginctl">loginctl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="userdbctl">
+        <term><command>userdbctl</command></term>
+        <listitem>
+          <para>
+            is used to inspect users, groups, and group memberships
+          </para>
+          <indexterm zone="elogind userdbctl">
+            <primary sortas="b-userdbctl">userdbctl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="varlinkctl">
+        <term><command>varlinkctl</command></term>
+        <listitem>
+          <para>
+            is used to interact with and invoke Varlink services
+          </para>
+          <indexterm zone="elogind varlinkctl">
+            <primary sortas="b-varlinkctl">varlinkctl</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libelogind">
+        <term><filename class="libraryfile">libelogind</filename></term>
+        <listitem>
+          <para>
+            is the main elogind utility library
+          </para>
+          <indexterm zone="elogind libelogind">
+            <primary sortas="c-libelogind">libelogind</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libnss_elogind">
+        <term><filename class="libraryfile">libnss_elogind</filename></term>
+        <listitem>
+          <para>
+            is the Name Service Switch (NSS) module for elogind
+          </para>
+          <indexterm zone="elogind libnss_elogind">
+            <primary sortas="c-libnss_elogind">libnss_elogind</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

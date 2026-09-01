@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY speex-root "https://downloads.xiph.org/releases/speex">
+  <!ENTITY speex-download "&speex-root;/speex-&speex-version;.tar.gz">
+  <!ENTITY speexdsp-download "&speex-root;/speexdsp-&speexdsp-version;.tar.gz">
+]>
+
+<sect1 id="speex" xreflabel="Speex-&speex-version;">
+  <?dbhtml filename="speex.html"?>
+
+  <title>Speex-&speex-version;</title>
+
+  <indexterm zone="speex">
+    <primary sortas="a-Speex">Speex</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to Speex</title>
+
+    <para>
+      Speex is an audio compression format
+      designed specifically for speech. It is well-adapted to Internet
+      applications and provides useful features that are not present in most
+      other CODECs.
+    </para>
+
+    <bridgehead renderas="sect3">Package Information</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Speex download: <ulink url="&speex-download;"/>
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Speexdsp download: <ulink url="&speexdsp-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+   <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&patch-root;/speexdsp-&speex-version;-build_fixes-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">Speex Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="libogg"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of Speex</title>
+
+    <para>
+      This package consists of two separate tarballs.
+      They will be built one after the other.
+    </para>
+
+    &as_root;
+
+    <para>
+      Start a subshell that will exit on error:
+    </para>
+
+<screen><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install Speex by running the following commands:
+    </para>
+
+<screen><userinput>for package in speex-* speexdsp-*; do
+  packagedir=${package%.tar.?z*}
+  tar xf $package
+  pushd $packagedir
+    ./configure --prefix=/usr    \
+                --disable-static \
+                --docdir=/usr/share/doc/$packagedir
+    make
+    as_root make install
+  popd
+  rm -rf $packagedir
+done</userinput></screen>
+
+    <para>
+      For multilib:
+    </para>
+
+<screen><userinput>for package in speex-* speexdsp-*; do
+  packagedir=${package%.tar.?z*}
+  tar xf $package
+  pushd $packagedir
+    CC="gcc -m32" CXX="g++ -m32"                     \
+    PKG_CONFIG=/usr/bin/i686-pc-linux-gnu-pkg-config \
+    ./configure --prefix=/usr                        \
+                 --libdir=/usr/lib32                 \
+                 --host=i686-pc-linux-gnu            \
+                 --disable-static
+    make
+    make DESTDIR=$PWD/DESTDIR install
+    as_root cp -vR DESTDIR/usr/lib32/* /usr/lib32
+    as_root ldconfig
+  popd
+  rm -rf $packagedir
+done</userinput></screen>
+
+    <para>
+      Exit out of the subshell that was started earlier:
+    </para>
+
+    <screen><userinput>exit</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-configure;
+
+    &static-libraries;
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>speexenc and speexdec</seg>
+        <seg>libspeex and libspeexdsp</seg>
+        <seg>
+          /usr/include/speex and
+          /usr/share/doc/speex-&speex-version;
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="speexdec">
+        <term><command>speexdec</command></term>
+        <listitem>
+          <para>
+            decodes a Speex file and
+            produces a WAV or raw file
+          </para>
+          <indexterm zone="speex speexdec">
+            <primary sortas="b-speexdec">speexdec</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="speexenc">
+        <term><command>speexenc</command></term>
+        <listitem>
+          <para>
+            encodes a WAV or raw file using Speex
+          </para>
+          <indexterm zone="speex speexenc">
+            <primary sortas="b-speexenc">speexenc</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libspeex">
+        <term><filename class="libraryfile">libspeex</filename></term>
+        <listitem>
+          <para>
+            provides functions for the audio encoding/decoding programs
+          </para>
+          <indexterm zone="speex libspeex">
+            <primary sortas="c-libspeex">libspeex.so</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libspeexdsp">
+        <term><filename class="libraryfile">libspeexdsp</filename></term>
+        <listitem>
+          <para>
+            is a speech processing library that goes along with the
+            Speex codec
+          </para>
+          <indexterm zone="speex libspeexdsp">
+            <primary sortas="c-libspeexdsp">libspeexdsp.so</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

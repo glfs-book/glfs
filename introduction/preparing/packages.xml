@@ -14,7 +14,7 @@
   files needed by the installation process. Usually, these are tarballs of
   source code and patches to solve various issues. If you are following GLFS
   right after LFS or MLFS, you probably don't have the tools necessary on the
-  LFS target to download any of the necessary files, or an internet connection.
+  LFS target to download any of the necessary files, or a network connection.
   If you do, GLFS can be treated like BLFS in that you can download files as
   you go, but can be pretty inconvenient.</para>
 
@@ -22,14 +22,14 @@
 
   <para>Firstly, whatever directory you choose to download to is up to you. But
   you should do it in an environment that both has <xref linkend="wget"/> and
-  an internet connection. If you'll follow GLFS in a chroot, you could
+  a network connection. If you'll follow GLFS in a chroot, you could
   download the files in <filename class="directory">$LFS/sources</filename>
   outside the chroot, then follow GLFS in the chroot. If you'll follow GLFS
   in a TTY, you could download the files on another distribution, put them on a
   storage device, and hook up the storage device to the LFS target so the files
   are accessible. You could also do a combination of all of the above or
   something else. All of that is if you don't have <xref linkend="wget"/> and
-  an internet connection on the LFS target. If you do, you can follow the bulk
+  a network connection on the LFS target. If you do, you can follow the bulk
   downloading process normally wherever you want.</para>
 
   <para>Download the Wget file list, then download all the files listed in
@@ -67,11 +67,10 @@ done</userinput></screen>
     linkend="nvidia-rev"/>, decide on a major NVIDIA revision, then download
     the files in each page within that revision section.
   </para><para>
-    Files for a package bundle like <xref linkend="vulkan-sdk"/>, <xref
-    linkend="llvm"/>, and <xref linkend="gstreamer-suite"/> will also not be
-    downloaded by the above instructions. They instead get downloaded when you
-    reach those package bundles, in which the tools to download them should
-    become available.
+    Files for a package bundle like <xref linkend="vulkan-sdk"/> and <xref
+    linkend="gstreamer"/> will also not be downloaded by the above
+    instructions. They instead get downloaded when you reach those package
+    bundles, in which the tools to download them should become available.
   </para></important>
 
 </sect1>

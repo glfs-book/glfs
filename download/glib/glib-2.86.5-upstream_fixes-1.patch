@@ -1,0 +1,55 @@
+Submitted By:            Douglas R. Reno <renodr at linuxfromscratch dot org>
+Date:                    2026-02-23
+Initial Package Version: 2.86.4
+Upstream Status:         Applied
+Origin:                  Upstream (PR #5035, bug #3895, glibc bug #33899)
+Description:             Fixes a memory corruption problem that has come to
+                         light with glibc-2.43 and glib-2.86.4 combined together.
+                         The issue is caused because the string pointer returned
+                         by setlocale(LC_TIME, NULL) may change if other code
+                         calls setlocale() again, and glibc internally implements
+                         the function by using strdup(). The pointer value itself
+                         can stay the same even if the string contents change,
+                         and glibc-2.43 had a change in malloc() which triggers
+                         the bug. This can affect any program which uses the
+                         g_date_time_format() function.
+
+diff -Naurp glib-2.86.4.orig/glib/gdatetime.c glib-2.86.4/glib/gdatetime.c
+--- glib-2.86.4.orig/glib/gdatetime.c	2026-02-13 13:08:16.000000000 -0600
++++ glib-2.86.4/glib/gdatetime.c	2026-02-23 13:26:23.883354196 -0600
+@@ -65,6 +65,7 @@
+ #include <langinfo.h>
+ #endif
+ 
++#include "glib-private.h"
+ #include "gatomic.h"
+ #include "gcharset.h"
+ #include "gcharsetprivate.h"
+@@ -2981,14 +2982,14 @@ date_time_lookup_era (GDateTime *datetim
+ {
+   static GMutex era_mutex;
+   static GPtrArray *static_era_description = NULL;  /* (mutex era_mutex) (element-type GEraDescriptionSegment) */
+-  static const char *static_era_description_locale = NULL;  /* (mutex era_mutex) */
++  static char *static_era_description_locale = NULL;  /* (mutex era_mutex) (owned) */
+   const char *current_lc_time = setlocale (LC_TIME, NULL);
+   GPtrArray *local_era_description;  /* (element-type GEraDescriptionSegment) */
+   GEraDate datetime_date;
+ 
+   g_mutex_lock (&era_mutex);
+ 
+-  if (static_era_description_locale != current_lc_time)
++  if (g_strcmp0 (static_era_description_locale, current_lc_time) != 0)
+     {
+       const char *era_description_str;
+       size_t era_description_str_len;
+@@ -3059,7 +3060,9 @@ date_time_lookup_era (GDateTime *datetim
+ 
+       g_free (tmp);
+ 
+-      static_era_description_locale = current_lc_time;
++      g_free (static_era_description_locale);
++      static_era_description_locale = g_strdup (current_lc_time);
++      g_ignore_leak (static_era_description_locale);
+     }
+ 
+   if (static_era_description == NULL)

@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../../../general.ent">
+  %general-entities;
+
+  <!ENTITY harfbuzz-root "https://github.com/harfbuzz/harfbuzz/releases/download">
+  <!ENTITY harfbuzz-download
+    "&harfbuzz-root;/&harfbuzz-version;/harfbuzz-&harfbuzz-version;.tar.xz">
+]>
+
+<sect1 id="harfbuzz" xreflabel="HarfBuzz-&harfbuzz-version;">
+  <?dbhtml filename="harfbuzz.html"?>
+
+  <title>HarfBuzz-&harfbuzz-version;</title>
+
+  <indexterm zone="harfbuzz">
+    <primary sortas="a-HarfBuzz">HarfBuzz</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to HarfBuzz</title>
+
+    <para>
+      The HarfBuzz package contains an OpenType text
+      shaping engine.
+    </para>
+
+    &long-build-time;
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&harfbuzz-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">HarfBuzz Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref role="first" linkend="freetype2"/>,
+      <xref linkend="glib2"/> (required for Pango; GObject Introspection
+      required for building GNOME), and
+      <xref linkend="icu"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of HarfBuzz</title>
+
+    <para>
+      Install HarfBuzz by running the following
+      commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr         \
+            --buildtype=release   \
+            -D graphite2=disabled \
+            -D tests=disabled     \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+
+    </para>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of HarfBuzz</title>
+
+    <para>
+      Install lib32-HarfBuzz by running the following
+      commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr         \
+            --buildtype=release   \
+            --cross-file=lib32    \
+            -D cairo=disabled     \
+            -D graphite2=disabled \
+            -D tests=disabled     \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install    &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D cairo=disabled</parameter>: This switch forces this package
+      to not link against Cairo for the lib32 build
+      as it will mistakenly believe that lib32-Cairo
+      is installed if the 64-bit version is installed.
+    </para>
+
+    <para>
+      <parameter>-D graphite2=disabled</parameter>: This switch disables
+      Graphite2 support, which isn't in GLFS.
+    </para>
+
+    <para>
+      <parameter>-D tests=disabled</parameter>: This switch disables building
+      tests.
+    </para>
+
+<!--
+    <para>
+      <parameter>-Dbenchmark=disabled</parameter>: This switch disables
+      downloading and building the google-benchmark
+      subproject, which requires <xref linkend="git"/>, and is of no
+      use for non developers.
+    </para>
+-->
+<!--
+    <para>
+      <option>-Ddocs=disabled</option>: If <xref linkend="gtk-doc"/> is
+      installed, the documentation is built and installed. This switch
+      prevents that.
+    </para>
+-->
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          hb-info,
+          hb-raster,
+          hb-shape,
+          hb-vector, and
+          hb-subset
+        </seg>
+        <seg>
+          libharfbuzz,
+          libharfbuzz-gobject,
+          libharfbuzz-gpu,
+          libharfbuzz-icu,
+          libharfbuzz-raster,
+          libharfbuzz-vector, and
+          libharfbuzz-subset
+        </seg>
+        <seg>
+          /usr/include/harfbuzz,
+          /usr/lib/cmake/harfbuzz, and
+          /usr/share/gtk-doc/html/harfbuzz (optional)
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+     <varlistentry id="hb-info">
+       <term><command>hb-info</command></term>
+       <listitem>
+         <para>
+           is used for gathering information about fonts installed on the
+           system
+         </para>
+         <indexterm zone="harfbuzz hb-info">
+           <primary sortas="b-hb-info">hb-info</primary>
+         </indexterm>
+       </listitem>
+     </varlistentry>
+
+<!-- No longer seen in 14.0.0
+     <varlistentry id="hb-ot-shape-closure">
+        <term><command>hb-ot-shape-closure</command></term>
+        <listitem>
+          <para>
+            gives the set of characters contained in a string, represented as
+            single characters and/or single character names. Example:
+            <command>hb-ot-shape-closure
+              /usr/share/fonts/dejavu/DejaVuSans.ttf "Hello World."</command>
+          </para>
+          <indexterm zone="harfbuzz hb-ot-shape-closure">
+            <primary sortas="b-hb-ot-shape-closure">hb-ot-shape-closure</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+-->
+
+      <varlistentry id="hb-raster">
+        <term><command>hb-raster</command></term>
+        <listitem>
+          <para>
+            is used to render shaped text as a raster image using a given font
+          </para>
+          <indexterm zone="harfbuzz hb-raster">
+            <primary sortas="b-hb-raster">hb-raster</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="hb-shape">
+        <term><command>hb-shape</command></term>
+        <listitem>
+          <para>
+            is used for the conversion of text strings into positioned glyphs
+          </para>
+          <indexterm zone="harfbuzz hb-shape">
+            <primary sortas="b-hb-shape">hb-shape</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="hb-subset">
+        <term><command>hb-subset</command></term>
+        <listitem>
+          <para>
+            is used to create subsets of fonts, and display text using them
+          </para>
+          <indexterm zone="harfbuzz hb-subset">
+            <primary sortas="b-hb-subset">hb-subset</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="hb-vector">
+        <term><command>hb-vector</command></term>
+        <listitem>
+          <para>
+            is used to draw text in SVG format with a given font
+          </para>
+          <indexterm zone="harfbuzz hb-vector">
+            <primary sortas="b-hb-vector">hb-vector</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="hb-view">
+        <term><command>hb-view</command></term>
+        <listitem>
+          <para>
+            displays a graphical view of a string shape using a
+            particular font as a set of glyphs. The output format is
+            automatically defined by the file extension, the supported ones
+            being ansi/png/svg/pdf/ps/eps. For example:
+            <command>hb-view --output-file=hello.png
+              /usr/share/fonts/dejavu/DejaVuSans.ttf "Hello World."</command>
+          </para>
+          <indexterm zone="harfbuzz hb-view">
+            <primary sortas="b-hb-view">hb-view</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz">
+        <term><filename class="libraryfile">libharfbuzz</filename></term>
+        <listitem>
+          <para>
+            is the HarfBuzz text shaping library
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz">
+            <primary sortas="c-libharfbuzz">libharfbuzz</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz-gobject">
+        <term><filename class="libraryfile">libharfbuzz-gobject</filename></term>
+        <listitem>
+          <para>
+            provides GObject integration for the HarfBuzz text shaping library
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz-gobject">
+            <primary sortas="c-libharfbuzz-gobject">libharfbuzz-gobject</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz-gpu">
+        <term><filename class="libraryfile">libharfbuzz-gpu</filename></term>
+        <listitem>
+          <para>
+            provides API functions for encoding glyph outlines on the CPU into
+            compact blobs that the GPU decodes and rasterizes directly into a
+            fragment shader
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz-gpu">
+            <primary sortas="c-libharfbuzz-gpu">libharfbuzz-gpu</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz-icu">
+        <term><filename class="libraryfile">libharfbuzz-icu</filename></term>
+        <listitem>
+          <para>
+            provides ICU integration for the HarfBuzz text shaping library
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz-icu">
+            <primary sortas="c-libharfbuzz-icu">libharfbuzz-icu</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz-raster">
+        <term><filename class="libraryfile">libharfbuzz-raster</filename></term>
+        <listitem>
+          <para>
+            provides API functions for rasterizing glyphs to bitmaps, including
+            color fonts
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz-raster">
+            <primary sortas="c-libharfbuzz-raster">libharfbuzz-raster</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz-subset">
+        <term><filename class="libraryfile">libharfbuzz-subset</filename></term>
+        <listitem>
+          <para>
+            provides API functions for performing subsetting operations on font
+            files
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz-subset">
+            <primary sortas="c-libharfbuzz-subset">libharfbuzz-subset</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libharfbuzz-vector">
+        <term><filename class="libraryfile">libharfbuzz-vector</filename></term>
+        <listitem>
+          <para>
+            provides API functions for outputting glyphs to vector formats,
+            including color fonts. Only SVG is currently supported, but more
+            formats may come later
+          </para>
+          <indexterm zone="harfbuzz libharfbuzz-vector">
+            <primary sortas="c-libharfbuzz-vector">libharfbuzz-vector</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+  </sect2>
+
+</sect1>

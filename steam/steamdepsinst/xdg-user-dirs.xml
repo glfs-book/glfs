@@ -56,7 +56,7 @@ ninja</userinput></screen>
       Now, as the &root; user:
     </para>
 
-<screen role="root"><userinput>ninja install</userinput><userinput revision="sysv"> &amp;&amp;
+<screen role="root"><userinput>ninja install</userinput><userinput revision="openrc,sysv"> &amp;&amp;
 rm -rvf /usr/lib/systemd</userinput></screen>
 
   </sect2>

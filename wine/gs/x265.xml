@@ -54,12 +54,12 @@
     <title>Installation of x265</title>
 
     <para>
-      First, change the CMake policy to allow building with CMake-4.0 and
-      newer:
+      Fix building for 32-bit as an incomplete check routes 32-bit through PLT,
+      which 32-bit can't do:
     </para>
 
-<screen><userinput>sed -r '/cmake_policy.*(0025|0054)/d' \
-  -i source/CMakeLists.txt</userinput></screen>
+<screen remap="pre"><userinput>sed -i 's/FORMAT_ELF/UNIX64 \&amp;\&amp; FORMAT_ELF/' \
+  source/common/x86/cpu-a.asm</userinput></screen>
 
     <para>
       Install x265 by running the following
@@ -72,9 +72,7 @@ cd    bld &amp;&amp;
 
 cmake -D CMAKE_INSTALL_PREFIX=/usr        \
       -D GIT_ARCHETYPE=1                  \
-      -D CMAKE_POLICY_VERSION_MINIMUM=3.5 \
-      -W no-dev ../source &amp;&amp;
-
+      -W no-author ../source             &amp;&amp;
 make</userinput></screen>
 
 
@@ -127,8 +125,7 @@ PKG_CONFIG_PATH=/usr/lib32/pkgconfig      \
 cmake -D CMAKE_INSTALL_PREFIX=/usr        \
       -D LIB_INSTALL_DIR=lib32            \
       -D GIT_ARCHETYPE=1                  \
-      -D CMAKE_POLICY_VERSION_MINIMUM=3.5 \
-      -W no-dev ../source &amp;&amp;
+      -W no-author ../source             &amp;&amp;
 
 make</userinput></screen>
 
@@ -161,11 +158,9 @@ ldconfig</userinput></screen>
       dependency.
     </para>
 
-    &cmake-policy-version;
-
     <para>
-      <parameter>-W no-dev</parameter>: This switch is used to suppress warnings
-      intended for the package developers.
+      <parameter>-W no-author</parameter>: This switch is used to suppress
+      warnings intended for the package developers.
     </para>
 
     <para>

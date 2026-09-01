@@ -1,0 +1,637 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY mesa-download "https://mesa.freedesktop.org/archive/mesa-&mesa-version;.tar.xz">
+]>
+
+<sect1 id="mesa" xreflabel="Mesa-&mesa-version;">
+  <?dbhtml filename="mesa.html"?>
+
+  <title>Mesa-&mesa-version;</title>
+
+  <indexterm zone="mesa">
+    <primary sortas="a-Mesa">Mesa</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to Mesa</title>
+
+    <para>
+      Mesa contains several libraries and drivers for multiple APIs like OpenGL
+      and Vulkan.
+    </para>
+
+    <important><para>
+      This package can install its own  OpenGL libraries, but is not
+      supported by this book's editors due to their various issues. Read <xref
+      linkend="aboutgl"/> for more information. If you do not want to install
+      <xref linkend="libglvnd"/> and want to install this package's OpenGL
+      libraries, the Command Explanations will instruct you to remove a
+      given parameter in order to do so.
+    </para></important>
+
+    <note>
+      <para>
+        Mesa is updated relatively often. You may want to use the latest
+        available version.
+      </para>
+    </note>
+
+    <note>
+      <para>
+        An Internet connection is needed for building the Nouveau Vulkan
+        driver. The system certificate store may need to be set up with
+        <xref role='recommended' linkend='make-ca'/> before building this
+        package.
+      </para>
+    </note>
+
+    &long-build-time;
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&mesa-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <para>
+      <emphasis role="strong">Patch for Seizure Prevention (Recommended)</emphasis>
+    </para>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Recommended patch:
+          <ulink url="&dl-root;/mesa/mesa-seizure_prevention-3.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">Mesa Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="libdrm"/>,
+      <xref linkend="libxcb"/>,
+      <xref linkend="mako"/>,
+      <xref linkend="pyyaml"/>, and
+      <xref linkend="xorg7-lib"/>
+    </para>
+
+    <para role="recommended">
+
+      <itemizedlist spacing="compact">
+        <listitem>
+          <para>
+            <xref linkend="cbindgen"/>, <xref linkend="make-ca"/>,
+            <xref linkend="rust-bindgen"/>, and
+            <xref linkend="rustc"/> (required for Nouveau Vulkan)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref linkend="spirv-llvm-translator"/> (required for Iris
+            Gallium3D and Nouveau Vulkan)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref linkend="libgbm"/> (to replace Mesa's <filename
+            class="libraryfile">libgbm</filename><footnote><para>
+              By default, <xref linkend="libgbm"/> gets installed as it has a
+              faster installation and requires less dependencies. If you want
+              Mesa's solution, read <quote>Command Explanations</quote> to find
+              out which option to remove.
+            </para></footnote>)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref linkend="libglvnd"/> (for the main OpenGL libraries)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref role="first" linkend="libva"/> (to provide VA-API support for some
+            Gallium3D drivers, note that there is a circular dependency. You must
+            build libva first without EGL and GLX support,
+            install this package, and rebuild libva)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref linkend="llvm"/> (required for r300, r600, RadeonSI
+            and LLVMPipe Gallium3D; Clang in LLVM is
+            required for SWRast Vulkan)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref linkend="vulkan-sdk"/> (required for Vulkan and Zink
+            Gallium3D)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <xref linkend="wayland-protocols"/> (required for many desktop
+            environments and recommended for GTK)
+          </para>
+        </listitem>
+      </itemizedlist>
+    </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/general/libdisplay-info.html">libdisplay-info</ulink>,
+      <xref linkend="libunwind"/>,
+      <ulink url="&blfs-svn;/general/lm-sensors.html">lm-sensors</ulink>,
+      <!-- for libsensors according to Meson -->
+      <ulink url="&slfs-website;/general/mesa-demos.html">Mesa-Demos</ulink>
+      (provides more than 300 demos to test Mesa),
+      <xref linkend="opencl-sdk"/>,
+      <ulink url="&blfs-svn;/general/valgrind.html">valgrind</ulink>,
+      <ulink url="https://omxilurceforge.net/">Bellagio OpenMAX Integration
+      Layer</ulink> (for mobile platforms),
+      <ulink
+      url="https://gitlab.freedesktop.org/karolherbst/mesa-libclc">
+      mesa-libclc</ulink>, and
+      <ulink url="https://github.com/tizonia/tizonia-openmax-il/wiki/Tizonia-OpenMAX-IL/">
+      libtizonia</ulink>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of Mesa</title>
+
+    <para>
+      Install Mesa by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr            \
+            --buildtype=release      \
+            -D glvnd=enabled         \
+            -D libgbm-external=true  \
+            -D platforms=x11,wayland \
+            -D gallium-drivers=auto  \
+            -D vulkan-drivers=auto   \
+            -D video-codecs=all      \
+            -D valgrind=disabled     \
+            -D libunwind=disabled    \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+    <para>
+      If desired, install the optional documentation by running
+      the following commands as the &root; user:
+    </para>
+
+<screen role="root"
+        remap="doc"><userinput>cp -rv ../docs -T /usr/share/doc/mesa-&mesa-version;</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of Mesa</title>
+
+    <para>
+      Install lib32-Mesa by running the following
+      commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr            \
+            --buildtype=release      \
+            --cross-file=lib32       \
+            -D glvnd=enabled         \
+            -D libgbm-external=true  \
+            -D platforms=x11,wayland \
+            -D gallium-drivers=auto  \
+            -D vulkan-drivers=auto   \
+            -D video-codecs=all      \
+            -D valgrind=disabled     \
+            -D libunwind=disabled    \
+            .. &amp;&amp;
+sed -i 's/\/usr\/lib\//\/usr\/lib32\//g' ./build.ninja &amp;&amp;
+
+BINDGEN_EXTRA_CLANG_ARGS="-m32" ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install                     &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32                  &amp;&amp;
+if [ -d DESTDIR/usr/share/vulkan ]; then
+    cp -vR DESTDIR/usr/share/vulkan /usr/share
+fi                                                     &amp;&amp;
+rm -rf DESTDIR                                         &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    <para>
+      <parameter>--buildtype=release</parameter>: This switch ensures a
+      fully-optimized build, and disables debug assertions which will
+      severely slow down the libraries in certain use-cases. Without this
+      switch, build sizes can span into the 2GB range.
+    </para>
+
+    <para>
+      <parameter>-D glvnd=enabled</parameter>: This forces the build system to
+      fail the configuration step if <xref linkend="libglvnd"/> was not found.
+      If you want to accept the risks of using this package's core OpenGL
+      libraries and have not installed libglvnd, remove this parameter. Read
+      <xref linkend="aboutgl"/> for more information. Switching is not
+      recommended.
+    </para>
+
+    <para>
+      <parameter>-D libgbm-external=true</parameter>: This links against the
+      system-installed <filename class="libraryfile">libgbm</filename> and
+      disables building the GBM. If you want to install Mesa's <filename
+      class="libraryfile">libgbm</filename>, remove this option.
+    </para>
+
+    <para>
+      <parameter>-D platforms=...</parameter>: This parameter
+      controls which windowing systems will be supported. Available
+      linux platforms are x11 and wayland.
+    </para>
+
+    <para>
+      <parameter>-D gallium-drivers=auto</parameter>: This parameter
+      controls which Gallium3D drivers should be built. Gallium drivers
+      are essentially OpenGL drivers. If you wish to build
+      specific drivers, valid options include:
+      <itemizedlist spacing="compact">
+        <listitem>
+          <para>
+            <literal>auto</literal> selects all Gallium3D drivers available
+            for x86
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>r300</literal> (for ATI Radeon 9000 or Radeon X
+            series)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>r600</literal> (for AMD/ATI Radeon HD 2000-6000
+            series)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>radeonsi</literal> (for AMD Radeon HD 7000 or newer
+            AMD GPU models)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>nouveau</literal>
+            (for Supported NVIDIA GPUs, they are listed as all
+            <quote>3D features</quote> either <quote>DONE</quote> or
+            <quote>N/A</quote> in <ulink
+            url='https://nouveau.freedesktop.org/FeatureMatrix.html'>the Nouveau
+            status page</ulink>)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>virgl</literal> (for QEMU virtual GPU
+            with virglrender support)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>svga</literal> (for VMWare virtual GPU)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>softpipe</literal> (using CPU for 3D rasterization)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>llvmpipe</literal> (<literal>softpipe</literal> but uses
+            LLVM to increase performance)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>zink</literal> (a driver converting OpenGL calls to Vulkan;
+            if the Vulkan driver is performant, this driver can also be
+            performant; can be used as a replacement for Gallium3D drivers like
+            <literal>nouveau</literal> as detailed in
+            <xref linkend="whatnow"/>)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>iris</literal> (for Intel GPUs shipped with Broadwell or newer
+            CPUs)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>crocus</literal> (for Intel GMA 3000, X3000 series, 4000 series,
+            or X4000 series GPUs shipped with chipsets, or Intel HD GPUs shipped with
+            pre-Broadwell CPUs)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>i915</literal> (for Intel GMA 900, 950, 3100, or 3150 GPUs
+            shipped with chipsets or Atom D/N 4xx/5xx CPUs)
+          </para>
+        </listitem>
+      </itemizedlist>
+
+      You may replace <literal>auto</literal> with a comma-separated list to
+      build only a subset of these drivers if you precisely know which drivers
+      you need, for example:
+      <option>-D gallium-drivers=radeonsi,iris,swrast</option>.
+    </para>
+
+    <para>
+      <parameter>-D vulkan-drivers=auto</parameter>: This switch enables support
+      for the Vulkan graphics API. It automatically builds all graphics drivers
+      that are available for Vulkan. If you wish to build specific drivers,
+      valid options include:
+      <itemizedlist spacing="compact">
+        <listitem>
+          <para>
+            <literal>amd</literal> (for AMD Radeon HD 7730 or newer AMD GPUs)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>intel</literal> (for Intel GPUs shipped with Skylake or newer
+            CPUs, or as a dedicated PCIe card)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>intel_hasvk</literal> (for Intel GPUs shipped with Ivy Bridge,
+            Haswell, or Broadwell CPUs)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>nouveau</literal> (for GTX 16XX, RTX 20XX, or newer NVIDIA GPUs;
+            this driver is maturing and is already quite performant, although less so
+            than the NVIDIA driver; however, it is a good
+            replacement, especially when used with <literal>zink</literal>)
+          </para>
+        </listitem>
+        <listitem>
+          <para>
+            <literal>swrast</literal> (using CPU for 3D rasterization. Note that it's
+            much slower than using a modern 3D-capable GPU)
+          </para>
+        </listitem>
+      </itemizedlist>
+
+      You may replace <literal>auto</literal> with a comma-separated list to
+      build only a subset of these drivers if you precisely know which drivers
+      you need, for example:
+      <option>-D vulkan-drivers=amd,nouveau,swrast</option>.
+    </para>
+
+    <para>
+      <parameter>-D video-codecs=all</parameter>: This parameter enables
+      building all the video codecs as they are disabled by default to avoid
+      legal issues. It would be prudent to not distribute your build if you
+      set this option. The matter is still unclear, however. See this
+      <ulink url="https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1016687">
+      Debian bug report</ulink> for more info.
+    </para>
+
+    <para>
+      <parameter>-D valgrind=disabled</parameter>: This parameter disables
+      the usage of Valgrind during the build process. Remove this parameter
+      if you have Valgrind installed, and wish to check for memory leaks.
+    </para>
+
+    <para>
+      <parameter>-D libunwind=disabled</parameter>: This parameter disables
+      the usage of libunwind.
+    </para>
+
+    <para>
+      <option>-D gallium-rusticl=true</option>: This option enables OpenCL
+      for the Gallium drivers. Additionally, it requires that you specify
+      which drivers get that support. The option for that is
+      <option>-D gallium-rusticl-enable-drivers</option>, which you can set to
+      <literal>auto</literal> for convenience. Understand that Rusticl still
+      has a lot of issues. This requires <ulink
+      url="https://gitlab.freedesktop.org/karolherbst/mesa-libclc">
+      mesa-libclc</ulink>.
+    </para>
+
+    <para>
+      <option>-D egl-native-platform="..."</option>: This parameter
+      controls which Embedded Graphics Library support will be built. Available
+      linux options are auto (default), x11, wayland, surfaceless, and drm.
+    </para>
+
+    <para>
+      <option>-D gles1=disabled</option>: If you didn't pass
+      <parameter>-D glvnd=enabled</parameter> and don't need GLESv1, use
+      this option. Some games still use GLESv1.
+    </para>
+
+    <para>
+      <option>-D gles2=disabled</option>: If you didn't pass
+      <parameter>-D glvnd=enabled</parameter> and don't need OpenGL ES, use
+      this option.
+    </para>
+
+<!-- No available values for this option anymore, dri2 has been completely
+     removed. Hide this now. -->
+<!--
+    <para>
+      <option>-D legacy-x11="..."</option> This parameter controls which legacy
+      X11 features get built-in support. Available linux options are none
+      (default) and dri2. These features are rarely needed anymore.
+    </para>
+-->
+
+    <para>
+      <computeroutput>BINDGEN_EXTRA_CLANG_ARGS="-m32"</computeroutput>: This
+      variable ensures that <xref linkend="rust-bindgen"/> generates bindings
+      that don't go out of bounds when compiling lib32 Nouveau Vulkan.
+    </para>
+
+    <para>
+      <command>sed -i 's/\/usr\/lib\//\/usr\/lib32\//g' ./build.ninja</command>:
+      This package can be stubborn and likes to link against LLVM libraries in
+      <filename>/lib</filename>, even on a multilib installation, so this command
+      tells this package to link against libraries in the proper directory.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle><!-- in /usr/lib -->
+      <segtitle>Installed DRI Driver Stubs</segtitle><!-- in /usr/lib/dri -->
+      <segtitle>Installed VA-API Drivers</segtitle><!-- in /usr/lib/dri -->
+      <segtitle>Installed GBM Backends</segtitle><!-- in /usr/lib/gbm -->
+      <segtitle>Installed Vulkan Drivers</segtitle><!-- in /usr/lib -->
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          None
+        </seg>
+        <seg>
+          libEGL_mesa,
+          libGLX_mesa, and
+          libgallium-&mesa-version;<!--, and
+          libgbm-->
+        </seg>
+        <seg>
+          <!-- Begin DRI Driver Stubs -->
+          libdril_dri and several symlinks to it
+          <!-- End DRI Driver Stubs -->
+        </seg>
+        <seg>
+          <!-- Begin VA-API Drivers -->
+          nouveau_drv_video,
+          r600_drv_video,
+          radeonsi_drv_video, and
+          virtio_gpu_drv_video (symlinks to libgallium-&mesa-version;)
+          <!-- End VA-API Drivers -->
+        </seg>
+        <seg>
+          <!-- Begin GBM Backends -->
+          dri_gbm
+          <!-- End GBM Backends -->
+        </seg>
+        <seg>
+          <!-- Begin Vulkan Drivers -->
+          libvulkan_intel_hasvk,
+          libvulkan_intel,
+          libvulkan_lvp,
+          libvulkan_nouveau, and
+          libvulkan_radeon
+          <!-- End Vulkan Drivers -->
+        </seg>
+        <seg>
+          <!-- Begin directories -->
+          <!-- /usr/include/GL is installed by xorg-protos -->
+          /usr/lib/{dri,gbm},
+          /usr/share/drirc.d (contains workarounds for various applications,
+          particularly browsers and games),
+          /usr/share/vulkan,
+          and /usr/share/doc/mesa-&mesa-version;
+          <!-- End directories -->
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="libEGL_mesa">
+        <term><filename class="libraryfile">libEGL_mesa</filename></term>
+        <listitem>
+          <para>
+            provides all the EGL functionality for Mesa's EGL drivers to work
+          </para>
+          <indexterm zone="mesa libEGL_mesa">
+            <primary sortas="c-libEGL_mesa">libEGL_mesa</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libGLX_mesa">
+        <term><filename class="libraryfile">libGLX_mesa</filename></term>
+        <listitem>
+          <para>
+            provides all the GLX functionality for Mesa's GLX drivers to work
+          </para>
+          <indexterm zone="mesa libGLX_mesa">
+            <primary sortas="c-libGLX_mesa">libGLX_mesa</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="dri_gbm">
+        <term><filename class='libraryfile'>dri_gbm</filename></term>
+        <listitem>
+          <para>
+            is the GBM backend for Mesa drivers
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libdril_dri">
+        <term><filename class='libraryfile'>libdril_dri</filename></term>
+        <listitem>
+          <para>
+            is a stub allowing Xorg server to co-operate with the Gallium3D
+            drivers
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgallium">
+        <term><filename class='libraryfile'>libgallium-&mesa-version;</filename></term>
+        <listitem>
+          <para>
+            contains all the Gallium3D drivers
+          </para>
+        </listitem>
+      </varlistentry>
+
+<!--
+      <varlistentry id="mesa-libgbm">
+        <term><filename class="libraryfile">libgbm</filename></term>
+        <listitem>
+          <para>
+            is the Mesa version of the Generic Buffer Management library
+          </para>
+          <indexterm zone="mesa mesa-libgbm">
+            <primary sortas="c-mesa-libgbm">libgbm</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+-->
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

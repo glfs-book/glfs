@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY nv-root "https://us.download.nvidia.com/XFree86/Linux-x86_64">
+  <!ENTITY nvidia-download
+    "&nv-root;/&nvidia-version;/NVIDIA-Linux-x86_64-&nvidia-version;.run">
+  <!ENTITY mesa-raw-repo
+    "https://gitlab.freedesktop.org/mesa/mesa/-/raw/&mesa-major-minor;">
+]>
+
+<sect1 id="nvidia" xreflabel="NVIDIA-&nvidia-version;">
+  <?dbhtml filename="nvidia.html"?>
+
+  <title>NVIDIA-&nvidia-full-name;</title>
+
+  <indexterm zone="nvidia">
+    <primary sortas="a-nvidia">NVIDIA</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to NVIDIA</title>
+
+    <para>
+      The NVIDIA proprietary driver contains
+      firmware, kernel drivers, userland drivers pertaining to OpenGL,
+      Vulkan, and hardware acceleration, and provides useful utilities for
+      Turing and later NVIDIA cards.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Recommended kernel version(s) to use: linux &nvidia-linux-version;
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Download: <ulink url="&nvidia-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/NVIDIA/NVIDIA-&nvidia-version;-kernel_gpl_cachyos-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">NVIDIA Dependencies</bridgehead>
+
+    <para role="required">
+      &nvidia-common-req;
+    </para>
+
+    <para role='recommended'>
+      <itemizedlist spacing='compact'>
+        <listitem>
+          <para>
+            <xref linkend="cuda"/>
+            (for building in direct CUDA support into various packages like
+            FFmpeg or OBS-Studio; install after following this page)
+          </para>
+        </listitem>
+        &nvidia-common-rec;
+      </itemizedlist>
+    </para>
+
+  </sect2>
+
+  <sect2>
+    <title>Installation of the NVIDIA Driver</title>
+
+    <para>
+      Install the NVIDIA driver by running the following command as the &root;
+      user:
+    </para>
+
+<screen><userinput>sh NVIDIA-Linux-x86_64-&nvidia-version;.run &nvidia-runfile-common;</userinput></screen>
+
+    &nvidia-runfile-explanation;
+
+  </sect2>
+
+  <sect2 role="configuration">
+    <title>Configuring NVIDIA</title>
+
+    <sect3 id="nvidia-config">
+      <title>Config Files</title>
+      <para>
+        <filename>/usr/lib/modprobe.d/nouveau.conf</filename>
+      </para>
+      <para revision="systemd">
+        <filename>/usr/lib/modprobe.d/nvidia.conf</filename>
+      </para>
+    </sect3>
+
+    &nvidia-issue-list;
+
+    <sect3><title>Configuration Information</title>
+
+      <para>
+        In order for the drivers to work properly, device nodes must be created
+        beforehand. Under certain conditions or configurations, these aren't
+        created automatically when starting a display server. As the &root;
+        user, create a udev rule to always create these nodes at boot time:
+      </para>
+
+<screen role="root"><userinput>mkdir -pv /usr/lib/udev/rules.d &amp;&amp;
+cat &gt; /usr/lib/udev/rules.d/60-nvidia.rules &lt;&lt; "EOF"
+<literal># Always create NVIDIA device nodes at boot time.
+ACTION=="add|bind",                \
+  ATTR{vendor}=="0x10de",          \
+  ATTR{class}=="0x03[0-9]*",       \
+  DRIVER=="nvidia",                \
+  TEST!="/dev/nvidiactl",          \
+  RUN+="/usr/bin/nvidia-modprobe", \
+  RUN+="/usr/bin/nvidia-modprobe -c0 -u"</literal>
+EOF</userinput></screen>
+
+      <para>
+        Nouveau and NVIDIAFB support was compiled into the kernel to make the
+        NVIDIA kernel modules build successfully. However, Nouveau and NVIDIAFB
+        conflict with the NVIDIA kernel modules, so they should be blacklisted.
+        Furthermore, other modules may have been built that can conflict, and
+        should likewise be disabled. As the &root; user, create the file
+        <filename>/usr/lib/modprobe.d/nouveau.conf</filename> to blacklist
+        Nouveau and NVIDIAFB, as well as other conflicting modules:
+      </para>
+
+<screen role="root"><userinput>mkdir -pv /usr/lib/modprobe.d &amp;&amp;
+cat &gt; /usr/lib/modprobe.d/nouveau.conf &lt;&lt; "EOF"
+<literal># Begin /usr/lib/modprobe.d/nouveau.conf
+
+blacklist nouveau
+blacklist nvidiafb
+blacklist nova_core
+blacklist nova_drm
+
+# End /usr/lib/modprobe.d/nouveau.conf</literal>
+EOF</userinput></screen>
+
+      <!-- Cannot be used on SysVinit and the kernel module will complain
+           as the ability to make use of sleep/hibernate is not yet
+           implemented. We must provide the files, but they do not work.
+           - Zeckma -->
+      <para revision="systemd">
+        When the GPU sleeps/hibernates, it will lose all memory allocations by
+        default. You can prevent this by setting two options for the NVIDIA
+        module. If you do not use sleep/hibernate, you can skip making the
+        following configuration file. Otherwise, as the &root; user:
+      </para>
+
+<screen revision="systemd" role="root"><userinput>cat &gt; /usr/lib/modprobe.d/nvidia.conf &lt;&lt; "EOF"
+<literal># Begin /usr/lib/modprobe.d/nvidia.conf
+
+options nvidia NVreg_PreserveVideoMemoryAllocations=1
+options nvidia NVreg_TemporaryFilePath=/var/tmp
+
+# End /usr/lib/modprobe.d/nvidia.conf</literal>
+EOF</userinput></screen>
+
+    </sect3>
+
+  </sect2>
+
+  <sect2>
+    <title>Proceeding</title>
+
+    <para>
+      If you installed <xref linkend="libglvnd"/> and <xref linkend="libgbm"/>,
+      you should not need Mesa as a dependency for any package in any of the
+      LFS books. You must ensure you install <xref linkend="xorg-server"/>
+      and/or <xref linkend="xwayland"/> from this book as those packages
+      include important patches that get around needing a Mesa-specific
+      interface used for loading Mesa-specific software rendering drivers.
+    </para>
+
+    <para>
+      With this Mesa-less setup, you can skip to <xref linkend="x"/> and
+      expect smooth sailing. If you want to however, you can also install CUDA
+      in this subsection to help performance, which up to you.
+    </para>
+
+  </sect2>
+
+</sect1>

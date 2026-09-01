@@ -277,23 +277,33 @@ TEXT
 EOF</userinput></screen>
     </sect3>
 
-    <sect3  id="TEMPLATE-init">
-      <title>Boot Script</title>
+    <sect3 id="TEMPLATE-init">
+      <title revision="systemd">Systemd Unit</title>
+      <title revision="openrc">OpenRC Service</title>
+      <title revision="sysv">Boot Script</title>
 
       <para>
         To automatically start the <command>TEMPLATE</command> daemon when the
-        system is rebooted, install the
-        <filename>/etc/rc.d/init.d/TEMPLATE</filename> bootscript from the
-        <xref linkend="bootscripts" revision="sysv"/>
+        system is rebooted,
+        <phrase revision="systemd,sysv">
+        install the <phrase
+        revision="sysv"><filename>/etc/rc.d/init.d/TEMPLATE</filename>
+        bootscript</phrase><phrase revision="systemd">TEMPLATE unit</phrase>
+        from the <xref linkend="bootscripts" revision="sysv"/>
         <xref linkend="systemd-units" revision="systemd"/> package as the
         &root; user:
+        </phrase>
+        <phrase revision="openrc">
+        install and enable the OpenRC service as the &root; user:
+        </phrase>
       </para>
 
       <indexterm zone="TEMPLATE TEMPLATE-init">
         <primary sortas="f-TEMPLATE">TEMPLATE</primary>
       </indexterm>
 
-<screen role="root"><userinput>make install-TEMPLATE</userinput></screen>
+<screen role="root"
+  revision="systemd,sysv"><userinput>make install-TEMPLATE</userinput></screen>
     </sect3>
   </sect2>
 

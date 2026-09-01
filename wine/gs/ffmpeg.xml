@@ -44,7 +44,7 @@
       <listitem>
         <para>
           Required patch:
-          <ulink url="&dl-root;/ffmpeg/ffmpeg-&ffmpeg-version;-chromium_method-1.patch"/>
+          <ulink url="&dl-root;/ffmpeg/ffmpeg-chromium_method-1.patch"/>
         </para>
       </listitem>
     </itemizedlist>
@@ -123,14 +123,16 @@
       <!-- qtwebengine -->
     </para>
 
-<screen><userinput remap="pre">patch -Np1 -i ../ffmpeg-&ffmpeg-version;-chromium_method-1.patch</userinput></screen>
+<screen><userinput remap="pre">patch -Np1 -i ../ffmpeg-chromium_method-1.patch</userinput></screen>
 
+<!--
     <para>
       Ensure FFmpeg can build against SVT-AV1-4.x or later:
     </para>
 
 <screen><userinput remap="pre">sed -e '/adaptive/c\ param->aq_mode = 0;' \
   -i libavcodec/libsvtav1.c</userinput></screen>
+-->
 
     <para>
       Install FFmpeg by running the following
@@ -194,6 +196,7 @@ gcc tools/qt-faststart.c -o tools/qt-faststart</userinput></screen>
             --disable-static                          \
             --enable-shared                           \
             --disable-debug                           \
+            --disable-doc                             \
             --enable-libaom                           \
             --enable-libdav1d                         \
             --enable-libfdk-aac                       \
@@ -326,12 +329,11 @@ ldconfig</userinput></screen>
         </seg>
         <seg>
           libavcodec, libavdevice, libavfilter,
-          libavformat, libavutil, libpostproc,
-          libswresample, and libswscale
+          libavformat, libavutil, libswresample,
+          and libswscale
         </seg>
         <seg>
           /usr/include/libav{codec,device,filter,format,util},
-          /usr/include/libpostproc,
           /usr/include/libsw{resample,scale},
           /usr/share/doc/ffmpeg-&ffmpeg-version;, and
           /usr/share/ffmpeg
@@ -467,18 +469,6 @@ ldconfig</userinput></screen>
           </para>
           <indexterm zone="ffmpeg libavutil">
             <primary sortas="c-libavutil">libavutil</primary>
-          </indexterm>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry id="libpostproc">
-        <term><filename class="libraryfile">libpostproc</filename></term>
-        <listitem>
-          <para>
-            is the FFmpeg post processing library
-          </para>
-          <indexterm zone="ffmpeg libpostproc">
-            <primary sortas="c-libpostproc">libpostproc</primary>
           </indexterm>
         </listitem>
       </varlistentry>

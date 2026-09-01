@@ -22,8 +22,8 @@
     <title>Introduction to Steam</title>
 
     <para>
-      The Steam package provides a digital software
-      delivery system, store, and launcher through VALVE's proprietary runtime.
+      The Steam package provides a digital software delivery system, store, and
+      launcher through VALVE's proprietary runtime.
     </para>
 
     <itemizedlist spacing="compact">
@@ -66,6 +66,15 @@
 
 <screen role="root"><userinput>make install &amp;&amp;
 mv -v /usr/share/doc/steam{,-&steam-version;}</userinput></screen>
+
+    <para>
+      Steam and Steam VR require some Udev rules to be in place for some
+      devices so they can be properly handled. Install the Udev rulesets as the
+      &root; user:
+    </para>
+
+<screen role="root"><userinput>&install-file; subprojects/steam-devices/*.rules \
+  -t /usr/lib/udev/rules.d/</userinput></screen>
 
   </sect2>
 
@@ -111,7 +120,7 @@ mv -v /usr/share/doc/steam{,-&steam-version;}</userinput></screen>
         Wayland session</para>
       </listitem>
       <listitem>
-        <para>Have a working internet connection</para>
+        <para>Have a working network connection</para>
       </listitem>
     </itemizedlist>
 

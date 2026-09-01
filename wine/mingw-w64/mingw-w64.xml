@@ -25,7 +25,8 @@
     <para>
       MinGW-w64's headers have been installed already, but not the rest of
       the project, including useful libraries. This building process will
-      cover the rest of the MinGW-w64 project.
+      cover the rest of the MinGW-w64 project. The headers will be reinstalled
+      as well, since this is the entire MinGW-w64 package installation.
     </para>
 
     &long-build-time;
@@ -50,6 +51,11 @@
 
   <sect2 role="installation">
     <title>Installation of MinGW-w64</title>
+
+    <para>
+      If you are building from a new MinGW-w64 source tree, be sure to apply
+      the patch from <xref linkend="mingw-w64-headers"/>.
+    </para>
 
   <sect3>
     <title>x86_64 MinGW-w64</title>

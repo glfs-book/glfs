@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY smi-root "https://gitlab.freedesktop.org/xdg/shared-mime-info/-/archive">
+  <!ENTITY shared-mime-info-download
+    "&smi-root;/&shared-mime-info-version;/shared-mime-info-&shared-mime-info-version;.tar.gz">
+]>
+
+<sect1 id="shared-mime-info"
+xreflabel="shared-mime-info-&shared-mime-info-version;">
+  <?dbhtml filename="shared-mime-info.html" ?>
+
+  <title>shared-mime-info-&shared-mime-info-version;</title>
+
+  <indexterm zone="shared-mime-info">
+    <primary sortas="a-shared-mime-info">shared-mime-info</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to Shared Mime Info</title>
+
+    <para>
+      The Shared Mime Info package contains a
+      MIME database. This allows central updates of MIME information for all
+      supporting applications.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&shared-mime-info-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Shared Mime Info Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="glib2"/> and
+      <xref linkend="libxml2"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of Shared Mime Info</title>
+
+    <para>
+      Install Shared Mime Info by running the
+      following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr         \
+            --buildtype=release   \
+            -D update-mimedb=true \
+            -D build-tests=false  \
+            -D build-spec=false   \
+            .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D update-mimedb=true</parameter>: This parameter tells
+      the build system to run <command>update-mime-database</command> during
+      installation. Otherwise, this must be done manually in order to be
+      able to use the MIME database.
+    </para>
+
+    <para>
+      <parameter>-D build-spec=false</parameter>: This parameter tells
+      the build system to not insert the HTML spec into the overall spec.
+      <ulink url="&blfs-svn;/pst/xmlto.html">xmlto</ulink> is required,
+      otherwise.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Program</segtitle>
+      <segtitle>Installed Library</segtitle>
+      <segtitle>Installed Directory</segtitle>
+
+      <seglistitem>
+        <seg>
+          update-mime-database
+        </seg>
+        <seg>
+          None
+        </seg>
+        <seg>
+          /usr/share/mime
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="update-mime-database">
+        <term><command>update-mime-database</command></term>
+        <listitem>
+          <para>
+            assists in adding MIME data to the database
+          </para>
+          <indexterm zone="shared-mime-info update-mime-database">
+            <primary sortas="b-update-mime-database">update-mime-database</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

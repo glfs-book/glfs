@@ -54,10 +54,12 @@
       the toolchain entirely.
     </para></note>
 
+<!--
     <para>
       If you are building from a new GCC source tree, be sure to apply the
       patch from <xref linkend="mingw-w64-gcc-static"/>.
     </para>
+-->
 
   <sect3>
     <title>x86_64 Installation of MinGW-w64-GCC</title>

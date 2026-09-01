@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+]>
+
+<sect1 id="nvidia-egl" xreflabel="NVIDIA EGL Libraries">
+  <?dbhtml filename="nvidia-egl.html"?>
+
+  <title>NVIDIA EGL Libraries</title>
+
+  <indexterm zone="nvidia-egl">
+    <primary sortas="a-nvidia-egl">NVIDIA EGL Libraries</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to NVIDIA EGL Libraries</title>
+
+    <para>
+      The NVIDIA EGL Libraries allow the EGL drivers
+      for the NVIDIA driver to function properly.
+    </para>
+
+    <bridgehead renderas="sect3">NVIDIA EGL Libraries Dependencies</bridgehead>
+
+    <para role="required">
+      &gbm;,
+      <xref linkend="libdrm"/>,
+      <xref linkend="libglvnd"/>,
+      <xref linkend="wayland"/>,
+      <xref linkend="wayland-protocols"/>, and
+      <xref linkend="xorg7-lib"/>
+    </para>
+
+  </sect2>
+
+  <sect2>
+    <title>Downloading NVIDIA EGL Libraries</title>
+
+    <para>
+      First, create a list of files to be downloaded:
+    </para>
+
+<screen><userinput>cat &gt; nvidia-egl-list &lt;&lt; "EOF"
+<literal>eglexternalplatform/archive/&eglexternalplatform-version;/eglexternalplatform-&eglexternalplatform-version;.tar.gz
+egl-gbm/archive/&egl-gbm-version;/egl-gbm-&egl-gbm-version;.tar.gz
+egl-wayland/archive/&egl-wayland-version;/egl-wayland-&egl-wayland-version;.tar.gz
+egl-wayland2/archive/v&egl-wayland2-version;/egl-wayland2-&egl-wayland2-version;.tar.gz
+egl-x11/archive/v&egl-x11-version;/egl-x11-&egl-x11-version;.tar.gz</literal>
+EOF</userinput></screen>
+
+    <!-- Keep watch for egl-x11 and egl-wayland2 dl links having v<x.x.x> for
+         tags. -->
+
+    <para>
+      To download the needed files using <xref linkend='wget'/>,
+      use the following commands:
+    </para>
+
+<screen><userinput>mkdir nvidia-egl &amp;&amp;
+cd nvidia-egl &amp;&amp;
+grep -v '^#' ../nvidia-egl-list | wget -i- -c \
+    -B https://github.com/NVIDIA/</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of NVIDIA EGL Libraries</title>
+
+&as_root;
+
+    <para>
+      First, start a subshell that will exit on error:
+    </para>
+
+<screen><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install all of the libraries by running the following commands:
+    </para>
+
+<screen><userinput>for package in $(grep -v '^#' ../nvidia-egl-list)
+do
+  package=$(basename "$package")
+  packagedir=${package%.tar.?z*}
+  tar -xf $package
+  pushd $packagedir
+     mkdir build
+     cd    build
+       meson setup --prefix=/usr       \
+                   --buildtype=release \
+                   ..
+       ninja
+     as_root ninja install
+  popd
+  rm -rf $packagedir
+  as_root /sbin/ldconfig
+done</userinput></screen>
+
+    <para>
+      Finally, exit the shell that was started earlier:
+    </para>
+
+<screen><userinput>exit</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>None</seg>
+        <seg>
+          libnvidia-egl-gbm,
+          libnvidia-egl-wayland,
+          libnvidia-egl-wayland2,
+          libnvidia-egl-xcb, and
+          libnvidia-egl-xlib
+        </seg>
+        <seg>
+          /usr/share/egl/egl_external_platform.d
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="libnvidia-egl-gbm">
+        <term><filename class="libraryfile">libnvidia-egl-gbm</filename></term>
+        <listitem>
+          <para>
+            provides GBM EGL application support
+          </para>
+          <indexterm zone="nvidia-egl libnvidia-egl-gbm">
+            <primary sortas="c-libnvidia-egl-gbm">libnvidia-egl-gbm</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libnvidia-egl-wayland">
+        <term><filename class="libraryfile">libnvidia-egl-wayland</filename></term>
+        <listitem>
+          <para>
+            provides client-side Wayland EGL
+            application support
+          </para>
+          <indexterm zone="nvidia-egl libnvidia-egl-wayland">
+            <primary sortas="c-libnvidia-egl-wayland">libnvidia-egl-wayland</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libnvidia-egl-wayland2">
+        <term><filename class="libraryfile">libnvidia-egl-wayland2</filename></term>
+        <listitem>
+          <para>
+            is the new version of <filename
+            class="libraryfile">libnvidia-egl-wayland</filename>, aiming to be
+            more simplified and improves certain functions
+          </para>
+          <indexterm zone="nvidia-egl libnvidia-egl-wayland">
+            <primary sortas="c-libnvidia-egl-wayland">libnvidia-egl-wayland</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libnvidia-egl-xcb">
+        <term><filename class="libraryfile">libnvidia-egl-xcb</filename></term>
+        <listitem>
+          <para>
+            provides EGL XCB support
+          </para>
+          <indexterm zone="nvidia-egl libnvidia-egl-xcb">
+            <primary sortas="c-libnvidia-egl-xcb">libnvidia-egl-xcb</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libnvidia-egl-xlib">
+        <term><filename class="libraryfile">libnvidia-egl-xlib</filename></term>
+        <listitem>
+          <para>
+            provides EGL XLib support
+          </para>
+          <indexterm zone="nvidia-egl libnvidia-egl-xlib">
+            <primary sortas="c-libnvidia-egl-xlib">libnvidia-egl-xlib</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

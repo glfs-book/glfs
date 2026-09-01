@@ -27,7 +27,7 @@
 
   <para>
     Please check <xref linkend="steamdeps"/> to find what you will need
-    before proceeding, although most of <xref linkend="shareddeps"/>
+    before proceeding, although most of <xref linkend="core"/>
     is a straight shot. There is some choice involved such as choosing
     if you want ALSA or PulseAudio, X11 or Wayland, etc.
   </para>

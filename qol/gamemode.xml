@@ -68,7 +68,7 @@ cd    build &amp;&amp;
 
 meson setup --prefix=/usr                      \
             --libexecdir=/usr/libexec/gamemode \
-            --buildtype=release                \</userinput><userinput revision="sysv">
+            --buildtype=release                \</userinput><userinput revision="openrc,sysv">
             -D with-sd-bus-provider=elogind    \</userinput><userinput>
             .. &amp;&amp;
 ninja</userinput></screen>
@@ -79,13 +79,14 @@ ninja</userinput></screen>
 
 <screen role="root"><userinput>ninja install</userinput></screen>
 
-    <para>
+    <para revision="systemd">
       If you installed the recommended dependencies and haven't installed this
       package just as a dependency, enable the daemon for every user as the
       &root; user:
     </para>
 
-<screen role="root"><userinput>systemctl enable --global gamemoded</userinput></screen>
+<screen role="root"
+  revision="systemd"><userinput>systemctl enable --global gamemoded</userinput></screen>
 
   </sect2>
 
@@ -126,7 +127,7 @@ ldconfig</userinput></screen>
 
     &meson-buildtype-release;
 
-    <para revision="sysv"><parameter>-D with-sd-bus-provider=elogind</parameter>:
+    <para revision="openrc,sysv"><parameter>-D with-sd-bus-provider=elogind</parameter>:
     This parameter ensures that elogind gets used instead of systemd-logind,
     as Systemd is the default in this package. You can override the requirement
     for logind altogether via the next parameter.</para>
@@ -136,6 +137,32 @@ ldconfig</userinput></screen>
     inih. This is used in the lib32 build since the daemon doesn't provide any
     libraries.</para>
 
+  </sect2>
+
+  <sect2 revision="openrc" id="gamemode-init">
+    <title>OpenRC Service</title>
+
+    <para>
+      To automatically start the <command>gamemoded</command> daemon when the
+      system is rebooted, install and the OpenRC service:
+    </para>
+
+<screen role="root"><userinput>&install-exec; /dev/stdin /etc/user/init.d/gamemoded &lt;&lt; "EOF"
+<literal>#!/sbin/openrc-run
+# Starts the gamemoded daemon
+# Authors: Zeckma - zeckma@linuxfromscratch.com
+# Version: LFS &version;
+
+description="starts the gamemoded daemon"
+
+supervisor=supervise-daemon
+command_background=yes
+command="/usr/bin/gamemoded"</literal>
+EOF</userinput></screen>
+    <para>
+      As a regular user, enable the service:
+    </para>
+<screen><userinput>&rc-user-add; gamemoded default</userinput></screen>
   </sect2>
 
   <sect2 role="content">

@@ -401,21 +401,14 @@ span.blue {
 }
 
 
-div.tip > h3::before {
-  content: "\F05A ";
+div.tip > h3::before,
+div.note > h3::before {
+  content: "\2713 ";
 }
 div.important > h3::before,
 div.caution   > h3::before,
 div.warning   > h3::before {
   content: "\26A0 ";
-}
-div.note > h3::before {
-  @media (prefers-color-scheme: dark) {
-    content: "\F249 ";
-  }
-  @media (prefers-color-scheme: light) {
-    content: "\F24A ";
-  }
 }
 
 div.note, div.tip {

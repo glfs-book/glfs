@@ -35,9 +35,8 @@
 
     <para>
       To check for packages that have had a CVE fixed, go to the
-      <ulink url="&lfs-website;/glfs/advisories.html">GLFS Advisories</ulink>
-      page. It both covers broken changes and security information for each
-      release.
+      <ulink url="&advisories;">GLFS Advisories</ulink> page. It both covers
+      broken changes and security information for each release.
     </para>
 
     <para>

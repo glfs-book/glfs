@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY kg-url "https://github.com/KhronosGroup/">
+]>
+
+<sect1 id="opencl-sdk" xreflabel="OpenCL-SDK-&opencl-version;">
+  <?dbhtml filename="opencl-sdk.html"?>
+
+  <title>OpenCL-SDK-&opencl-version;</title>
+
+  <indexterm zone="opencl-sdk">
+    <primary sortas="a-opencl-sdk">OpenCL-SDK</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to OpenCL-SDK</title>
+
+    <para>
+      This page covers the installation of the OpenCL SDK, consisting of the
+      C and C++ headers, as well as the ICD loader.
+    </para>
+
+    <para>
+      ICD stands for "Installable Client Driver" in which the ICD loader just
+      loads given drivers that are installed on the system, given that an ICD
+      file is present that declares the driver exists. This is how the Vulkan
+      ICD loader from the Vulkan SDK works.
+    </para>
+
+    <para>
+      OpenCL drivers often come from video drivers, like Mesa and NVIDIA.
+    </para>
+
+    <bridgehead renderas="sect3">OpenCL-SDK Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="cmake"/>
+    </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/general/doxygen.html">Doxygen</ulink>,
+      <ulink url="&blfs-svn;/general/graphviz.html">Graphviz</ulink>, and
+      <ulink url="&blfs-svn;/general/ruby.html">Ruby</ulink>
+    </para>
+
+  </sect2>
+
+  <sect2>
+    <title>Downloading OpenCL-SDK</title>
+
+    <para>
+      First, create a list of files to be downloaded:
+    </para>
+
+<screen><userinput>cat &gt; opencl-sdk-list-&opencl-version; &lt;&lt; "EOF"
+<literal>OpenCL-Headers/archive/v&opencl-version;/OpenCL-Headers-&opencl-version;.tar.gz
+OpenCL-CLHPP/archive/v&opencl-version;/OpenCL-CLHPP-&opencl-version;.tar.gz
+OpenCL-ICD-Loader/archive/v&opencl-version;/OpenCL-ICD-Loader-&opencl-version;.tar.gz</literal>
+EOF</userinput></screen>
+
+    <para>
+      To download the needed files using <xref linkend='wget'/>,
+      use the following commands:
+    </para>
+
+<screen><userinput>mkdir opencl-sdk-&opencl-version; &amp;&amp;
+cd    opencl-sdk-&opencl-version; &amp;&amp;
+grep -v '^#' ../opencl-sdk-list-&opencl-version; | wget -i- -c \
+    -B &kg-url;</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of OpenCL-SDK</title>
+
+&as_root;
+
+    <para>
+      First, start a subshell that will exit on error:
+    </para>
+
+<screen><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install all of the packages by running the following commands:
+    </para>
+
+<screen><userinput>for package in OpenCL-{Headers,CLHPP,ICD-Loader}
+do
+  longpackage=$package-&opencl-version;.tar.?z*
+  packagedir=${longpackage%.tar.?z*}
+  tar -xf $longpackage
+  pushd $packagedir
+    mkdir build
+    cd    build
+    cmake -D CMAKE_INSTALL_PREFIX=/usr \
+          -D CMAKE_BUILD_TYPE=Release  \
+          -D BUILD_TESTING=OFF         \
+          -D BUILD_EXAMPLES=OFF        \
+          -G Ninja ..
+    ninja
+    as_root ninja install
+  popd
+  rm -rf $packagedir
+done</userinput></screen>
+
+    <para>
+      For multilib:
+    </para>
+
+<screen><userinput>package="OpenCL-ICD-Loader"
+longpackage=$package-&opencl-version;.tar.?z*
+packagedir=${longpackage%.tar.?z*}
+tar -xf $longpackage
+pushd $packagedir
+  mkdir build
+  cd    build
+  CC="gcc -m32" CXX="g++ -m32"         \
+  PKG_CONFIG_PATH=/usr/lib32/pkgconfig \
+  cmake -D CMAKE_INSTALL_PREFIX=/usr   \
+        -D CMAKE_INSTALL_LIBDIR=lib32  \
+        -D CMAKE_BUILD_TYPE=Release    \
+        -D BUILD_TESTING=OFF           \
+        -D BUILD_EXAMPLES=OFF          \
+        -G Ninja ..
+  ninja
+  DESTDIR=$PWD/DESTDIR ninja install
+  as_root cp -vR DESTDIR/usr/lib32/* /usr/lib32
+  as_root ldconfig
+  rm -rf DESTDIR
+popd
+rm -rf $packagedir</userinput></screen>
+
+    <para>
+      Finally, exit the shell that was started earlier:
+    </para>
+
+<screen><userinput>exit</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          cllayerinfo
+        </seg>
+        <seg>
+          libOpenCL
+        </seg>
+        <seg>
+          /usr/include/CL and
+          /usr/share/cmake/{OpenCLHeaders,OpenCLHeadersCpp,OpenCLICDLoader}
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="cllayerinfo">
+        <term><command>cllayerinfo</command></term>
+        <listitem>
+          <para>
+            displays information about an OpenCL layer
+          </para>
+          <indexterm zone="opencl-sdk cllayerinfo">
+            <primary sortas="b-cllayerinfo">cllayerinfo</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libOpenCL">
+        <term><filename class="libraryfile">libOpenCL</filename></term>
+        <listitem>
+          <para>
+            is the OpenCL ICD loader
+          </para>
+          <indexterm zone="opencl-sdk libOpenCL">
+            <primary sortas="c-libOpenCL">libOpenCL</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

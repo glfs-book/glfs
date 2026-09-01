@@ -79,7 +79,7 @@
     editors/contributors since then have decided to scrap that idea
     <footnote><para>
       See this
-      <ulink url="https://github.com/Zeckmathederg/glfs/issues/9">issue</ulink>
+      <ulink url="https://github.com/zeckma-tech/glfs/issues/9">issue</ulink>
       for rationale behind bootstrapping the MinGW-w64 toolchain. The issue
       originates from the old Github repository the GLFS project was once
       hosted.

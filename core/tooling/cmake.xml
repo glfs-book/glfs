@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY cmake-download "https://cmake.org/files/v&cmake-major-version;/cmake-&cmake-version;.tar.gz">
+]>
+
+<sect1 id="cmake" xreflabel="CMake-&cmake-version;">
+  <?dbhtml filename="cmake.html"?>
+
+  <title>CMake-&cmake-version;</title>
+
+  <indexterm zone="cmake">
+    <primary sortas="a-CMake">CMake</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to CMake</title>
+
+    <para>
+      The CMake package contains a modern toolset used for generating
+      Makefiles. It is a successor of the auto-generated
+      <command>configure</command> script and aims to be platform and
+      compiler independent. A significant user of CMake is KDE since version 4.
+    </para>
+
+    &long-build-time;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&cmake-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&patch-root;/cmake-&cmake-version;-upstream_fix-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">CMake Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="curl"/> and <xref linkend="nghttp2"/>
+    </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/general/libarchive.html">
+      libarchive</ulink> and
+      <ulink url="&blfs-svn;/general/libuv.html">
+      libuv</ulink>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of CMake</title>
+
+<!--
+    <para>
+      First, fix support for <xref linkend="curl"/> due to a type conflict:
+    </para>
+
+<screen><userinput remap="pre">sed -i 's/curl_proxytype/long/' \
+  Source/CTest/cmCTestCurl.h</userinput></screen>
+-->
+
+    <para>
+      Install CMake by running the following
+      commands:
+    </para>
+
+<screen><userinput>sed -i '/"lib64"/s/64//' Modules/GNUInstallDirs.cmake &amp;&amp;
+
+./bootstrap --prefix=/usr          \
+            --system-libs          \
+            --mandir=/share/man    \
+            --no-system-jsoncpp    \
+            --no-system-cppdap     \
+            --no-system-librhash   \
+            --no-system-libarchive \
+            --no-system-libuv      \
+            --docdir=/share/doc/cmake-&cmake-version; &amp;&amp;
+
+make</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>make install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    <para>
+      <command>sed ... Modules/GNUInstallDirs.cmake</command>:
+      This command disables applications using cmake from attempting to
+      install files in /usr/lib64/.
+    </para>
+
+    <para>
+      <parameter>--system-libs</parameter>: This switch forces the build
+      system to link against the system installed version for all needed
+      libraries but those explicitly specified via a
+      <option>--no-system-*</option> option.
+    </para>
+
+    <para>
+      <parameter>--no-system-jsoncpp</parameter> and
+      <parameter>--no-system-cppdap</parameter>: These switches remove the
+      JSON-C++ library from the list of system
+      libraries. A bundled version of that library is used instead.
+    </para>
+
+    <para>
+      <parameter>--no-system-librhash</parameter>: This switch removes the
+      librhash library from the list of system
+      libraries used. A bundled version of that library is used instead.
+    </para>
+
+    <para>
+      <parameter>--no-system-{libarchive,libuv}</parameter>: These
+      switches do the same thing as above but for those packages listed in
+      these parameters. They are not installed currently.
+    </para>
+
+    <para>
+      <option>--parallel=</option>: This switch enables performing the
+      CMake bootstrap with multiple jobs
+      at one time.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          ccmake, cmake, cpack, and ctest
+        </seg>
+        <seg>
+          None
+        </seg>
+        <seg>
+          /usr/share/cmake-&cmake-major-version; and
+          /usr/share/doc/cmake-&cmake-version;
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="ccmake">
+        <term><command>ccmake</command></term>
+        <listitem>
+          <para>
+            is a curses based interactive frontend to
+            <command>cmake</command>
+          </para>
+          <indexterm zone="cmake ccmake">
+            <primary sortas="b-ccmake">ccmake</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="cmake-prog">
+        <term><command>cmake</command></term>
+        <listitem>
+          <para>
+            is the makefile generator
+          </para>
+          <indexterm zone="cmake cmake-prog">
+            <primary sortas="b-cmake">cmake</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="cpack">
+        <term><command>cpack</command></term>
+        <listitem>
+          <para>
+            is the CMake packaging program
+          </para>
+          <indexterm zone="cmake cpack">
+            <primary sortas="b-cpack">cpack</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="ctest">
+        <term><command>ctest</command></term>
+        <listitem>
+          <para>
+            is a testing utility for cmake-generated build trees
+          </para>
+          <indexterm zone="cmake ctest">
+            <primary sortas="b-ctest">ctest</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

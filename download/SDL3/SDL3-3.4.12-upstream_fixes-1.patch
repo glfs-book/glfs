@@ -1,0 +1,56 @@
+Submitted by:            Zeckma
+Date:                    2026-08-02
+Initial Package Version: 3.4.12
+Origin:                  Upstream, changed to match for
+                         src/core/unix/SDL_gtk.c,
+                         https://github.com/libsdl-org/SDL/commit/c15b6a14578bf6544cad834473d35bf2e38ff3fd
+Upstream Status:         Actual commit merged, this patch cannot be.
+Description:             Avoids static and non-static redefintions for
+                         getresuid.
+
+diff '--color=auto' -Naurp SDL3-3.4.12.orig/src/core/unix/SDL_gtk.c SDL3-3.4.12/src/core/unix/SDL_gtk.c
+--- SDL3-3.4.12.orig/src/core/unix/SDL_gtk.c	2026-05-13 10:32:50.000000000 -0600
++++ SDL3-3.4.12/src/core/unix/SDL_gtk.c	2026-08-02 07:42:03.308197663 -0600
+@@ -83,19 +83,23 @@ static bool IsGtkInit(void)
+     return libgdk != NULL && libgtk != NULL;
+ }
+ 
+-#ifndef HAVE_GETRESUID
++#ifdef HAVE_GETRESUID
++#define SDL_getresuid getresuid
++#else
+ // Non-POSIX, but Linux and some BSDs have it.
+ // To reduce the number of code paths, if getresuid() isn't available at
+ // compile-time, we behave as though it existed but failed at runtime.
+-static inline int getresuid(uid_t *ruid, uid_t *euid, uid_t *suid) {
++static inline int SDL_getresuid(uid_t *ruid, uid_t *euid, uid_t *suid) {
+     errno = ENOSYS;
+     return -1;
+ }
+ #endif
+ 
+-#ifndef HAVE_GETRESGID
++#ifdef HAVE_GETRESGID
++#define SDL_getresgid getresgid
++#else
+ // Same as getresuid() but for the primary group
+-static inline int getresgid(uid_t *ruid, uid_t *euid, uid_t *suid) {
++static inline int SDL_getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid) {
+     errno = ENOSYS;
+     return -1;
+ }
+@@ -117,12 +121,12 @@ bool SDL_CanUseGtk(void)
+     // we don't use Linux getauxval() or prctl PR_GET_DUMPABLE,
+     // BSD issetugid(), or similar OS-specific detection
+ 
+-    if (getresuid(&ruid, &euid, &suid) != 0) {
++    if (SDL_getresuid(&ruid, &euid, &suid) != 0) {
+         ruid = suid = getuid();
+         euid = geteuid();
+     }
+ 
+-    if (getresgid(&rgid, &egid, &sgid) != 0) {
++    if (SDL_getresgid(&rgid, &egid, &sgid) != 0) {
+         rgid = sgid = getgid();
+         egid = getegid();
+     }

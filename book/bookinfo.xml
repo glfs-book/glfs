@@ -11,6 +11,7 @@
 
   <title>
     Gaming Linux<superscript>&reg;</superscript> From Scratch
+    <phrase revision="openrc">(OpenRC Edition)</phrase>
     <phrase revision="sysv">(System V Edition)</phrase>
   </title>
   <subtitle>Version &version;</subtitle>

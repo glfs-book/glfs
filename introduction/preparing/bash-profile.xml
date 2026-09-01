@@ -129,8 +129,6 @@ fi
 # Set up some environment variables.
 export HISTSIZE=1000
 export HISTIGNORE="&amp;:[bf]g:exit"
-
-# Set some defaults for graphical systems
 export XDG_DATA_DIRS=${XDG_DATA_DIRS:-/usr/share}
 export XDG_CONFIG_DIRS=${XDG_CONFIG_DIRS:-/etc/xdg}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp/xdg-$USER}
@@ -141,7 +139,15 @@ for script in /etc/profile.d/*.sh ; do
         fi
 done
 
-unset script
+unset script</literal></userinput><userinput revision="openrc"><literal>
+
+for envs in ~/.config/rc/env/*.env ; do
+        if [ -r $envs ] ; then
+                . $envs
+        fi
+done
+
+unset envs</literal></userinput><userinput><literal>
 
 # End /etc/profile</literal>
 EOF</userinput></screen>
@@ -274,11 +280,11 @@ EOF</userinput></screen>
         This script sets an environment variable necessary for
         native language support. A full discussion on determining this
         variable can be found on the <ulink
-        url="&mlfs-m32-root;/chapter09/locale.html">
+        url="&mlfs-root;/chapter09/locale.html">
         Configuring the System Locale</ulink> page.
       </para>
 
-<screen role="root" revision="sysv"><userinput>cat &gt; /etc/profile.d/i18n.sh &lt;&lt; "EOF"
+<screen role="root" revision="openrc,sysv"><userinput>cat &gt; /etc/profile.d/i18n.sh &lt;&lt; "EOF"
 <literal># Set up i18n variables
 for i in $(locale); do
   unset ${i%=*}
@@ -372,13 +378,15 @@ EOF</userinput></screen>
       <title>Sourcing All the Profile Scripts</title>
 
       <para>
-        Each login, the scripts above will be sourced and will establish
-        environment variables and functions. However, doing a continuous run
-        of this book, BLFS, and/or SLFS that started before creating the above
-        scripts will lead to the scripts not being sourced automatically. They
-        must be sourced manually first before the environment variables and
-        functions are available to the current login session. You should make
-        it a point to source the profile scripts after creating them.
+        Upon each login, the scripts created above will establish
+        environment variables and functions. If you have just followed LFS/MLFS
+        and want to continue to GLFS immediately, these files should be sourced
+        so that important behavior and variables are recognized, as they aren't
+        sourced automatically until you login once more. In order to source the
+        scripts, the main one (<filename>/etc/profile</filename>) is sourced
+        which then sources all the other scripts. This allows pulling in new
+        changes to the scripts to be rather simple. This action will be done
+        various times throughout the book when the environment must be changed.
       </para>
 
       &source-profile;

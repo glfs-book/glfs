@@ -35,6 +35,16 @@
       </listitem>
     </itemizedlist>
 
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/mingw-w64/mingw-w64-v&mingw-w64-version;-upstream_fixes-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
   </sect2>
 
   <sect2 role="installation">
@@ -56,6 +66,12 @@
         the configure scripts from there.
       </para>
     </note>
+
+    <para>
+      Apply a patch to fix function behavior:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../mingw-w64-v&mingw-w64-version;-upstream_fixes-1.patch</userinput></screen>
 
   <sect3>
     <title>x86_64 MinGW-w64-headers</title>

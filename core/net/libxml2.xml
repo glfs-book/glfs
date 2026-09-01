@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY libxml2-dl-root "https://download.gnome.org/sources/libxml2">
+  <!ENTITY libxml2-download
+    "&libxml2-dl-root;/&libxml2-minor;/libxml2-&libxml2-version;.tar.xz">
+]>
+
+<sect1 id="libxml2" xreflabel="libxml2-&libxml2-version;">
+  <?dbhtml filename="libxml2.html"?>
+
+  <title>libxml2-&libxml2-version;</title>
+
+  <indexterm zone="libxml2">
+    <primary sortas="a-libxml2">libxml2</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to libxml2</title>
+
+    <para>
+      The libxml2 package contains libraries and utilities used for parsing XML
+      files.
+    </para>
+
+    &abi-break;
+
+    &meson-cross;
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&libxml2-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/libxml2/libxml2-&libxml2-version;-upstream_fix-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">libxml2 Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="icu"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of libxml2</title>
+
+<!--
+    <para>
+      First, apply a patch from upstream to fix a failure parsing
+      attribute values that are not yet normalized:
+    </para>
+
+<screen><userinput>patch -Np1 -i ../libxml2-&libxml2-version;-upstream_fix-1.patch</userinput></screen>
+-->
+
+    <para>
+      First, remove an unnecessary call to <command>git</command> in
+      <filename>meson.build</filename>:
+    </para>
+
+<screen
+  remap="pre"><userinput>sed -i "/'git'/,+3d" meson.build</userinput></screen>
+
+    <para>
+      Install libxml2 by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            -D history=enabled  \
+            -D icu=enabled &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install &amp;&amp;
+sed 's/--static/--shared/' -i /usr/bin/xml2-config</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of libxml2</title>
+
+    <para>
+      Install lib32-libxml2 by running the following commands:
+    </para>
+
+<screen><userinput>rm -rf * &amp;&amp;
+meson setup --prefix=/usr            \
+            --buildtype=release      \
+            --cross-file=lib32       \
+            -D history=enabled       \
+            -D icu=enabled &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>DESTDIR=$PWD/DESTDIR ninja install    &amp;&amp;
+cp -Rv DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    <para>
+      <parameter>-D history=enabled</parameter>: This switch enables
+      Readline support when running <command>xmlcatalog</command> or
+      <command>xmllint</command> in shell mode.
+    </para>
+
+    <para>
+      <parameter>-D icu=enabled</parameter>: This switch enables support for
+      ICU, which provides additional Unicode support. This is needed for some
+      packages outside of GLFS, such as for QtWebEngine.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          xml2-config,
+          xmlcatalog, and
+          xmllint
+        </seg>
+        <seg>
+          libxml2
+        </seg>
+        <seg>
+          /usr/include/libxml2,
+          /usr/lib/cmake/libxml2,
+          /usr/share/doc/libxml2-&libxml2-version;, and
+          /usr/share/gtk-doc/html/libxml2
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="xml2-config">
+        <term><command>xml2-config</command></term>
+        <listitem>
+          <para>
+            determines the compile and linker flags that should be used to
+            compile and link programs that use
+            <filename class="libraryfile">libxml2</filename>
+          </para>
+          <indexterm zone="libxml2 xml2-config">
+            <primary sortas="b-xml2-config">xml2-config</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="xmlcatalog">
+        <term><command>xmlcatalog</command></term>
+        <listitem>
+          <para>
+            is used to monitor and manipulate XML and SGML catalogs
+          </para>
+          <indexterm zone="libxml2 xmlcatalog">
+            <primary sortas="b-xmlcatalog">xmlcatalog</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="xmllint">
+        <term><command>xmllint</command></term>
+        <listitem>
+          <para>
+            parses XML files and outputs reports (based upon options) to detect
+            errors in XML coding
+          </para>
+          <indexterm zone="libxml2 xmllint">
+            <primary sortas="b-xmllint">xmllint</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libxml2-lib">
+        <term><filename class="libraryfile">libxml2</filename></term>
+        <listitem>
+          <para>
+            provides functions for programs to parse files that use the XML
+            format
+          </para>
+          <indexterm zone="libxml2 libxml2-lib">
+            <primary sortas="c-libxml2">libxml2</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

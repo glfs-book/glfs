@@ -1,84 +1,78 @@
 <!-- PYTHON ENTITIES -->
 <!ENTITY python3-major                "3">
 <!ENTITY python3-minor                "14">
-<!ENTITY python3-patch                "3">
 <!ENTITY python3-majorver             "&python3-major;.&python3-minor;">
-<!ENTITY python3-version              "&python3-majorver;.&python3-patch;">
 <!ENTITY python3-lib-suffix           "cpython-&python3-major;&python3-minor;-&lt;arch&gt;-linux-gnu">
 <!ENTITY python3-site                 "/usr/lib/python&python3-majorver;/site-packages">
 
-<!-- SHARED DEPENDENCIES -->
+<!-- CORE COMPONENTS -->
 
 <!-- Networking -->
+<!ENTITY icu-major                    "78">
+<!ENTITY icu-minor                    "3">
+<!ENTITY icu-patch                    "0">
+<!ENTITY icu-version                  "&icu-major;.&icu-minor;">
+<!ENTITY libxml2-minor                "2.15">
+<!ENTITY libxml2-version              "&libxml2-minor;.3">
+<!ENTITY nghttp2-version              "1.70.0">
 <!ENTITY libtasn1-version             "4.21.0">
-<!ENTITY nspr-version                 "4.38.2">
+<!ENTITY nspr-version                 "4.40">
 <!ENTITY nss-major                    "3">
-<!ENTITY nss-minor                    "120">
-<!ENTITY nss-dir                      "&nss-major;_&nss-minor;_1">
-<!ENTITY nss-version                  "&nss-major;.&nss-minor;.1">
-<!ENTITY p11-kit-version              "0.26.2">
+<!ENTITY nss-minor                    "126">
+<!ENTITY nss-dir                      "&nss-major;_&nss-minor;">
+<!ENTITY nss-version                  "&nss-major;.&nss-minor;">
+<!ENTITY p11-kit-version              "0.26.5">
 <!ENTITY make-ca-version              "1.16.1">
-<!ENTITY libunistring-version         "1.4.1">
+<!ENTITY libunistring-version         "1.4.2">
 <!ENTITY libidn2-version              "2.3.8">
-<!ENTITY libpsl-version               "0.21.5">
-<!ENTITY curl-version                 "8.18.0">
+<!ENTITY libpsl-version               "0.23.3">
+<!ENTITY curl-version                 "8.21.0">
 <!ENTITY wget-version                 "1.25.0">
 <!-- Security -->
 <!ENTITY dbus-version                 "1.16.2">   <!-- Even minors only -->
 <!ENTITY linux-pam-version            "1.7.2">
 <!ENTITY linux-pam-docs-version       "&linux-pam-version;">
-<!ENTITY shadow-version               "4.19.3">
-<!ENTITY elogind-version              "255.22">
-<!ENTITY systemd-version              "259.1">
+<!ENTITY openrc-version               "0.63.3">
+<!ENTITY shadow-version               "4.20.2">
+<!ENTITY elogind-version              "257.16">
+<!ENTITY systemd-version              "261.2">
 <!ENTITY duktape-version              "2.7.0">
 <!ENTITY glib2-major                   "2">
-<!ENTITY glib2-minor                   "86">
-<!ENTITY glib2-version                 "&glib2-major;.&glib2-minor;.4">
+<!ENTITY glib2-minor                   "88">
+<!ENTITY glib2-version                 "&glib2-major;.&glib2-minor;.3">
 <!ENTITY gi-major                      "1">
-<!ENTITY gi-minor                      "&gi-major;.&glib2-minor;">
+<!ENTITY gi-minor                      "&gi-major;.86">
 <!ENTITY gobject-introspection-version "&gi-minor;.0">
-<!ENTITY icu-major                    "78">
-<!ENTITY icu-minor                    "2">
-<!ENTITY icu-patch                    "0">
-<!ENTITY icu-version                  "&icu-major;.&icu-minor;">
-<!ENTITY libxml2-minor                "2.15">
-<!ENTITY libxml2-version              "&libxml2-minor;.1">
-<!ENTITY shared-mime-info-version     "2.4">
+<!ENTITY shared-mime-info-version     "2.5.1">
 <!ENTITY desktop-file-utils-version   "0.28">
 <!ENTITY polkit-version               "127">
 <!-- Tooling -->
-<!ENTITY cmake-major-version          "4.2">
-<!ENTITY cmake-minor-version          "3">
-<!ENTITY cmake-version                "&cmake-major-version;.&cmake-minor-version;">
-<!ENTITY llvm-maj-version             "21">
+<!ENTITY cmake-major-version          "4.4">
+<!ENTITY cmake-point-version          "2">
+<!ENTITY cmake-version                "&cmake-major-version;.&cmake-point-version;">
+<!ENTITY llvm-maj-version             "22">
+<!ENTITY llvm-min-version             "1">
 <!ENTITY llvm-point-version           "8">
-<!ENTITY llvm-version                 "&llvm-maj-version;.1.&llvm-point-version;">
-<!ENTITY rustc-version                "1.93.1">
+<!ENTITY llvm-version                 "&llvm-maj-version;.&llvm-min-version;.&llvm-point-version;">
+<!ENTITY rustc-version                "1.97.1">
 <!-- rustc-change-id can be found in src/bootstrap/src/utils/change_tracker.rs
      at the very bottom: change_id. -->
-<!ENTITY rustc-change-id              "148795">
-<!ENTITY cbindgen-version             "0.29.2">
+<!ENTITY rustc-change-id              "154587">
+<!ENTITY cbindgen-version             "0.29.4">
 <!ENTITY rust-bindgen-version         "0.72.1">
-<!ENTITY spirv-llvm-translator-version "&llvm-maj-version;.1.3">
-<!ENTITY libclc-version               "&llvm-version;">
-<!ENTITY mako-version                 "1.3.10">
-<!ENTITY cython-version               "3.2.4">
+<!ENTITY mako-version                 "1.4.1">
+<!ENTITY cython-version               "3.2.9">
 <!ENTITY yaml-version                 "0.2.5">
 <!ENTITY pyyaml-version               "6.0.3">
-<!ENTITY ruby-minor-version           "4.0">
-<!ENTITY ruby-patch-version           "1">
-<!ENTITY ruby-version                 "&ruby-minor-version;.&ruby-patch-version;">
-<!ENTITY ruby-gemdir                  "/usr/lib/ruby/gems/&ruby-minor-version;.0">
 <!-- Audio -->
 <!ENTITY alsa-download-http           "https://www.alsa-project.org/files/pub">
 <!ENTITY alsa-download-ftp            "ftp://ftp.alsa-project.org/pub">
-<!ENTITY alsa-version                 "1.2.15.3">
+<!ENTITY alsa-version                 "1.2.16.1">
 <!ENTITY alsa-lib-version             "&alsa-version;">
 <!ENTITY alsa-plugins-version         "1.2.12">
-<!ENTITY alsa-utils-version           "1.2.15.2">
+<!ENTITY alsa-utils-version           "1.2.16">
 <!ENTITY libogg-version               "1.3.6">
 <!ENTITY libvorbis-version            "1.3.7">
-<!ENTITY vorbistools-version          "1.4.2">
 <!ENTITY flac-version                 "1.5.0">
 <!ENTITY opus-version                 "1.6.1">
 <!ENTITY speex-version                "1.2.1">
@@ -95,12 +89,12 @@
 <!ENTITY libXdmcp-version             "1.1.5">
 <!ENTITY xcb-proto-version            "1.17.0">
 <!ENTITY libxcb-version               "1.17.0">
-<!ENTITY which-version                "2.23">
-<!ENTITY libpng-version               "1.6.55">
-<!ENTITY apng-version                 "1.6.54">
-<!ENTITY freetype2-version            "2.14.1">
-<!ENTITY harfbuzz-version             "12.3.2">
-<!ENTITY fontconfig-version           "2.17.1">
+<!ENTITY which-version                "2.25">
+<!ENTITY libpng-version               "1.6.58">
+<!ENTITY apng-version                 "1.6.58">
+<!ENTITY freetype2-version            "2.14.3">
+<!ENTITY harfbuzz-version             "14.3.1">
+<!ENTITY fontconfig-version           "2.18.3">
 <!-- stable lt .90 micro version -->
 <!-- BEGIN X7LIB -->
 <!ENTITY xtrans-version               "1.6.0">
@@ -112,7 +106,7 @@
 <!ENTITY libXScrnSaver-version        "1.2.5">
 <!ENTITY libXt-version                "1.3.1">
 <!ENTITY libXmu-version               "1.3.1">
-<!ENTITY libXpm-version               "3.5.18">
+<!ENTITY libXpm-version               "3.5.19">
 <!ENTITY libXaw-version               "1.0.16">
 <!ENTITY libXfixes-version            "6.0.2">
 <!ENTITY libXcomposite-version        "0.4.7">
@@ -120,9 +114,9 @@
 <!ENTITY libXcursor-version           "1.2.3">
 <!ENTITY libXdamage-version           "1.1.7">
 <!ENTITY libfontenc-version           "1.1.9">
-<!ENTITY libXfont2-version            "2.0.7">
+<!ENTITY libXfont2-version            "2.0.9">
 <!ENTITY libXft-version               "2.3.9">
-<!ENTITY libXi-version                "1.8.2">
+<!ENTITY libXi-version                "1.8.3">
 <!ENTITY libXinerama-version          "1.1.6">
 <!ENTITY libXrandr-version            "1.5.5">
 <!ENTITY libXres-version              "1.2.3">
@@ -131,7 +125,7 @@
 <!ENTITY libXvMC-version              "1.0.15">
 <!ENTITY libXxf86dga-version          "1.1.7">
 <!ENTITY libXxf86vm-version           "1.1.7">
-<!ENTITY libpciaccess-version         "0.18.1">
+<!ENTITY libpciaccess-version         "0.19">
 <!ENTITY libxkbfile-version           "1.2.0">
 <!ENTITY libxshmfence-version         "1.3.3">
 <!ENTITY libXpresent-version          "1.0.2">
@@ -143,94 +137,100 @@
 <!ENTITY xcb-util-renderutil-version  "0.3.10">
 <!ENTITY xcb-util-wm-version          "0.4.2">
 <!ENTITY xcb-util-cursor-version      "0.1.6">
+<!ENTITY xcb-util-errors-version      "1.0.1">
 <!ENTITY libunwind-version            "1.8.3">
-<!ENTITY nettle-version               "3.10.1">
-<!ENTITY gnutls-version               "3.8.12">
+<!ENTITY nettle-version               "4.0">
+<!ENTITY gnutls-version               "3.8.13">
 <!ENTITY pixman-version               "0.46.4">
 <!ENTITY mtdev-version                "1.1.7">
 <!ENTITY libevdev-version             "1.13.6">
-<!ENTITY libinput-version             "1.30.1">
+<!ENTITY libinput-version             "1.31.3">
 <!-- Wayland -->
-<!ENTITY wayland-version              "1.24.0">
-<!ENTITY wayland-protocols-version    "1.47">
+<!ENTITY wayland-version              "1.26.0">
+<!ENTITY wayland-protocols-version    "1.49">
 <!-- Graphics APIs -->
 <!ENTITY libglvnd-version             "1.7.0">
 <!ENTITY glu-version                  "9.0.3">
-<!ENTITY vulkan-sdk-version           "1.4.341.0">
-<!ENTITY spirv-llvm-translator-version "&llvm-maj-version;.1.4">
+<!ENTITY vulkan-sdk-version           "1.4.357.0">
+<!ENTITY spirv-llvm-translator-version "&llvm-maj-version;.&llvm-min-version;.5">
 <!ENTITY libatomic_ops-version        "7.10.0">
-<!ENTITY libdrm-version               "2.4.131">
-<!ENTITY libgbm-version               "1.0.4">
-<!ENTITY libva-version                "2.23.0">
-<!ENTITY ocl-headers-version          "2025.07.22">
-<!ENTITY ocl-icd-version              "2.3.4">
-<!ENTITY libclc-version               "&llvm-version;">
+<!ENTITY libdrm-version               "2.4.134">
+<!ENTITY libgbm-version               "1.0.8">
+<!ENTITY libva-version                "2.24.1">
+<!ENTITY opencl-version               "2026.05.29">
 <!-- Graphics Drivers - Preliminaries -->
-<!ENTITY pciutils-version             "3.14.0">
-<!ENTITY hwdata-version               "0.404">
+<!ENTITY pciutils-version             "3.15.0">
+<!ENTITY hwdata-version               "0.410">
 <!-- Graphics Drivers - NVIDIA -->
-<!ENTITY mesa-major-minor             "25.3">
-<!ENTITY mesa-version                 "&mesa-major-minor;.5">
+<!ENTITY mesa-major-minor             "26.1">
+<!ENTITY mesa-version                 "&mesa-major-minor;.7">
+<!--
 <!ENTITY eglexternalplatform-version  "1.2.1">
-<!ENTITY egl-gbm-version              "1.1.2.1">
-<!ENTITY egl-wayland-version          "1.1.20">
-<!ENTITY egl-x11-version              "1.0.4">
-<!ENTITY nv-codec-headers-version     "13.0.19.0">
-<!ENTITY nvidia-vaapi-driver-version  "0.0.14">
+<!ENTITY egl-gbm-version              "1.1.3">
+<!ENTITY egl-wayland-version          "1.1.21">
+<!ENTITY egl-wayland2-version         "1.0.1">
+<!ENTITY egl-x11-version              "1.0.5">
+-->
+<!ENTITY nv-codec-headers-version     "13.1.15.0">
+<!ENTITY nvidia-vaapi-driver-version  "0.0.17">
 <!ENTITY nvidia-beta                  "<superscript>BETA</superscript>">
 <!-- NVIDIA -->
-<!ENTITY nvidia-rev           "590">
-<!ENTITY nvidia-linux-version "6.17.x - 6.18.x">
-<!ENTITY nvidia-version       "&nvidia-rev;.48.01">
-<!ENTITY nvidia-full-name     "&nvidia-version;">
+<!ENTITY nvidia-rev           "610">
+<!ENTITY nvidia-linux-version "6.17.x - 7.1.x">
+<!ENTITY nvidia-version       "&nvidia-rev;.57.04">
+<!ENTITY nvidia-full-name     "&nvidia-version;<!-- &nvidia-beta;-->">
+<!--
 <!ENTITY nv-manifest-version  "2">
 <!ENTITY nv-sysv-bs           "2">
-<!ENTITY cuda-version         "13.1.1">
-<!ENTITY cuda-nvidia-version  "590.48.01">
+-->
+<!ENTITY cuda-version         "13.3.1">
+<!ENTITY cuda-nvidia-version  "610.43.02">
 <!-- NVIDIA r580 -->
-<!ENTITY nvidia-r580-linux-version "6.15.x - 6.18.x">
-<!ENTITY nvidia-r580-version       "580.126.09">
+<!ENTITY nvidia-r580-linux-version "6.15.x - 7.1.x">
+<!ENTITY nvidia-r580-version       "580.178.04">
 <!ENTITY nvidia-r580-full-name     "&nvidia-r580-version;">
+<!--
 <!ENTITY nv-r580-manifest-version  "1">
 <!ENTITY nv-r580-sysv-bs           "1">
-<!ENTITY cuda-r580-version         "13.0.2">
-<!ENTITY cuda-r580-nvidia-version  "580.95.05">
+-->
+<!ENTITY cuda-r580-version         "13.0.3">
+<!ENTITY cuda-r580-nvidia-version  "580.126.20">
 <!-- X11 -->
-<!ENTITY xbitmaps-version             "1.1.3">
+<!ENTITY xbitmaps-version             "1.1.4">
 <!-- BEGIN X7APP -->
-<!ENTITY iceauth-version              "1.0.10">
-<!ENTITY mkfontscale-version          "1.2.3">
+<!ENTITY iceauth-version              "1.0.11">
+<!ENTITY mkfontscale-version          "1.2.4">
 <!ENTITY sessreg-version              "1.1.4">
-<!ENTITY setxkbmap-version            "1.3.4">
+<!ENTITY setxkbmap-version            "1.3.5">
 <!ENTITY smproxy-version              "1.0.8">
 <!ENTITY xauth-version                "1.1.5">
 <!ENTITY xcmsdb-version               "1.0.7">
 <!ENTITY xcursorgen-version           "1.0.9">
 <!ENTITY xdpyinfo-version             "1.4.0">
 <!ENTITY xdriinfo-version             "1.0.8">
-<!ENTITY xev-version                  "1.2.6">
+<!ENTITY xev-version                  "1.2.7">
 <!ENTITY xgamma-version               "1.0.8">
 <!ENTITY xhost-version                "1.0.10">
 <!ENTITY xinput-version               "1.6.4">
 <!ENTITY xkbcomp-version              "1.5.0">
 <!ENTITY xkbevd-version               "1.1.6">
-<!ENTITY xkbutils-version             "1.0.6">
+<!ENTITY xkbutils-version             "1.0.7">
 <!ENTITY xkill-version                "1.0.7">
-<!ENTITY xlsatoms-version             "1.1.4">
-<!ENTITY xlsclients-version           "1.1.5">
+<!ENTITY xlsatoms-version             "1.1.5">
+<!ENTITY xlsclients-version           "1.1.6">
 <!ENTITY xmessage-version             "1.0.7">
-<!ENTITY xmodmap-version              "1.0.11">
+<!ENTITY xmodmap-version              "1.0.12">
 <!ENTITY xpr-version                  "1.2.0">
 <!ENTITY xprop-version                "1.2.8">
-<!ENTITY xrandr-version               "1.5.3">
-<!ENTITY xrdb-version                 "1.2.2">
-<!ENTITY xrefresh-version             "1.1.0">
-<!ENTITY xset-version                 "1.2.5">
-<!ENTITY xsetroot-version             "1.1.3">
-<!ENTITY xvinfo-version               "1.1.5">
-<!ENTITY xwd-version                  "1.0.9">
-<!ENTITY xwininfo-version             "1.1.6">
-<!ENTITY xwud-version                 "1.0.7">
+<!ENTITY xrandr-version               "1.5.4">
+<!ENTITY xrdb-version                 "1.2.3">
+<!ENTITY xrefresh-version             "1.1.1">
+<!ENTITY xset-version                 "1.2.6">
+<!ENTITY xsetroot-version             "1.1.4">
+<!ENTITY xvinfo-version               "1.1.6">
+<!ENTITY xwd-version                  "1.0.10">
+<!ENTITY xwininfo-version             "1.1.7">
+<!ENTITY xwud-version                 "1.0.8">
 <!-- END X7APP -->
 <!ENTITY xcursor-themes-version       "1.0.7">
 <!-- BEGIN X7FONTS -->
@@ -241,14 +241,14 @@
 <!ENTITY font-bh-type1-version        "1.0.4">
 <!ENTITY font-ibm-type1-version       "1.0.4">
 <!ENTITY font-misc-ethiopic-version   "1.0.5">
-<!ENTITY font-util-version            "1.4.1">
+<!ENTITY font-util-version            "1.4.2">
 <!ENTITY font-xfree86-type1-version   "1.0.5">
 <!-- END X7FONTS -->
-<!ENTITY xkeyboard-config-version     "2.46">
+<!ENTITY xkeyboard-config-version     "2.48">
 <!ENTITY libepoxy-minor               "1.5">
 <!ENTITY libepoxy-version             "&libepoxy-minor;.10">
-<!ENTITY xorg-server-version          "21.1.21">
-<!ENTITY xwayland-version             "24.1.9">
+<!ENTITY xorg-server-version          "21.1.24">
+<!ENTITY xwayland-version             "24.1.13">
 <!-- BEGIN X7DRIVER -->
 <!ENTITY xorg-evdev-driver-version    "2.11.0">
 <!ENTITY xorg-libinput-driver-version "1.5.0">
@@ -261,62 +261,59 @@
 
 <!-- STEAM -->
 
-<!ENTITY xdg-user-dirs-version        "0.19">
-<!ENTITY libgpg-error-version         "1.59">
-<!ENTITY steam-version                "1.0.0.85">
+<!ENTITY xdg-user-dirs-version        "0.20">
+<!ENTITY libgpg-error-version         "1.61">
+<!ENTITY steam-version                "1.0.0.87">
 
 
 
 <!-- WINE -->
 
-<!ENTITY binutils-version             "2.46">
-<!ENTITY gcc-version                  "15.2.0">
-<!ENTITY mingw-w64-version            "13.0.0">
+<!ENTITY binutils-version             "2.47">
+<!ENTITY gcc-version                  "16.2.0">
+<!ENTITY mingw-w64-version            "14.0.0">
 <!ENTITY mingw-w64-gcc-version        "&gcc-version;">
 
 <!-- xkbcommon is terrible in regards to tagging, ending up with poorly named
      tarballs and/or extracted directories. BLFS solved this by using a mirror.
      We're solving this by using the git hash to get around the naming issue
      entirely. -->
-<!ENTITY libxkbcommon-minor           "6f76d1">
-<!ENTITY libxkbcommon-version         "6f76d19db72b5d450e927b41e1e96cbe3252aba8">
-<!ENTITY libxkbcommon-real            "1.13.1">
-<!ENTITY sdl3-version                 "3.4.0">
-<!ENTITY sdl2-version                 "2.32.64">
+<!ENTITY libxkbcommon-minor           "d1442a">
+<!ENTITY libxkbcommon-version         "d1442aaa6b635551182e83c3b55037f4c118c962">
+<!ENTITY libxkbcommon-real            "1.13.2">
+<!ENTITY sdl3-version                 "3.4.14">
+<!ENTITY sdl2-version                 "2.32.70">
 
-<!ENTITY nasm-version                 "3.01">
-<!ENTITY svt-av1-version              "4.0.1">
-<!ENTITY dav1d-version                "1.5.3">
-<!ENTITY libaom-version               "3.13.1">
+<!ENTITY nasm-version                 "3.02">
+<!ENTITY svt-av1-version              "4.2.0">
+<!ENTITY dav1d-version                "1.5.4">
+<!ENTITY libaom-version               "3.14.1">
 <!ENTITY fdk-aac-version              "2.0.3">
-<!ENTITY lame-version                 "3.100">
+<!ENTITY mpg123-version               "1.33.7">
+<!ENTITY lame-version                 "4.0">
 <!ENTITY libvpx-version               "1.16.0">
 <!ENTITY x264-version                 "20250815">
-<!ENTITY x265-version                 "4.1">
-<!ENTITY ffmpeg-version               "8.0.1">
-<!ENTITY gstreamer10-version          "1.28.1">  <!-- Even minors only -->
-<!ENTITY gst10-plugins-base-version   "&gstreamer10-version;">
-<!ENTITY gst10-plugins-good-version   "&gstreamer10-version;">
-<!ENTITY gst10-plugins-bad-version    "&gstreamer10-version;">
-<!ENTITY gst10-plugins-ugly-version   "&gstreamer10-version;">
-<!ENTITY gst10-libav-version          "&gstreamer10-version;">
+<!ENTITY x265-version                 "4.2">
+<!ENTITY ffmpeg-version               "9.0.1">
+<!ENTITY gstreamer-version            "1.28.6">
 
 <!ENTITY wine-major-version           "11">
-<!ENTITY wine-version                 "&wine-major-version;.2">
+<!ENTITY wine-version                 "&wine-major-version;.15">
 
-<!ENTITY dxvk-version                 "2.7.1">
+<!ENTITY dxvk-version                 "3.0.2">
 <!ENTITY dxvk-libdisplay-info         "275e6459c7ab1ddd4b125f28d0440716e4888078">
-<!ENTITY dxvk-spirv                   "8b246ff75c6615ba4532fe4fde20f1be090c3764">
-<!ENTITY dxvk-vulkan                  "234c4b7370a8ea3239a214c9e871e4b17c89f4ab">
+<!ENTITY dxvk-spirv                   "04f10f650d514df88b76d25e83db360142c7b174">
+<!ENTITY dxvk-vulkan                  "8864cdc896bbc2a9b6eb36b3218fc9ef57908d77">
+<!ENTITY dxvk-dxbc-spirv              "29ed92269d6c9ac5471ca8084e4e5668c964610c">
 
-<!ENTITY vkd3d-proton-version            "3.0b">
-<!ENTITY vkd3d-proton-spirv              "3b9447dc98371e96b59a6225bd062a9867e1d203">
-<!ENTITY vkd3d-proton-vulkan             "b39ab380a44b6c8df462c34e976ea9ce2d2c336b">
-<!ENTITY vkd3d-proton-dxil-spirv         "4e36bab794afdb7d78f56b866971009ca894fe9c">
+<!ENTITY vkd3d-proton-version            "3.0.1">
+<!ENTITY vkd3d-proton-spirv              "f88a2d766840fc825af1fc065977953ba1fa4a91">
+<!ENTITY vkd3d-proton-vulkan             "8864cdc896bbc2a9b6eb36b3218fc9ef57908d77">
+<!ENTITY vkd3d-proton-dxil-spirv         "31ecc70656cbfb30f5fb6ea1a6b67a0e89424346">
 <!ENTITY vkd3d-proton-spirv-cross        "4b7bcb7e5cf71015b3299088d22004bfe4e13a5e">
-<!-- <!ENTITY vkd3d-proton-dxil-spirv-headers "3b9447dc98371e96b59a6225bd062a9867e1d203"> -->
-<!ENTITY vkd3d-proton-spirv-tools        "e9a8ceeddbf7e3aaadac2ab6f8a6ab6437872e88">
-<!ENTITY vkd3d-proton-dxbc               "a38b5d78ed29f5fe44c2a2e157d5f7c2516df6e5">
+<!--<!ENTITY vkd3d-proton-dxil-spirv-headers "f88a2d766840fc825af1fc065977953ba1fa4a91">-->
+<!ENTITY vkd3d-proton-spirv-tools        "64f5770f59db933d46b9cad6edc42b4186409ef4">
+<!ENTITY vkd3d-proton-dxbc               "29c93aeecd55533a357fdd7c95be5587d1c1f506">
 <!ENTITY vkd3d-proton-dxbc-spirv         "c8ad050fcb29e42a2f57d9f59e97488f465c436d">
 
 

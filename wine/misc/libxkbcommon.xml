@@ -45,6 +45,16 @@
       </listitem>
     </itemizedlist>
 
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/libxkbcommon/libxkbcommon-&libxkbcommon-minor;-upstream_fix-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
     <bridgehead renderas="sect3">libxkbcommon Dependencies</bridgehead>
 
     <para role="required">
@@ -69,8 +79,13 @@
     <title>Installation of libxkbcommon</title>
 
     <para>
-      Install libxkbcommon by running the following
-      commands:
+      Fix runtime crashes with projects that use the provided libraries:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../libxkbcommon-&libxkbcommon-minor;-upstream_fix-1.patch</userinput></screen>
+
+    <para>
+      Install libxkbcommon by running the following commands:
     </para>
 
 <screen><userinput>mkdir build &amp;&amp;

@@ -84,6 +84,14 @@
       build type.
     </para>
 
+    <note><para>
+      Compiling this package may print out escape sequences due to parallelism.
+      Run the <command>reset</command> command if you cannot see what you type
+      afterwards or you see any other strange terminal behavior. During
+      compilation, it has been observed in some cases that the output font can
+      change, whether normal to italic or strikethrough.
+    </para></note>
+
     <sect3>
       <title>WoW64</title>
 

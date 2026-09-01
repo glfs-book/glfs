@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../../general.ent">
+  %general-entities;
+
+  <!ENTITY x7fonts-download "&xorg-dl;/font/">
+]>
+
+<sect1 id="xorg7-font" xreflabel="Xorg Fonts">
+  <?dbhtml filename="x7font.html"?>
+
+  <title>Xorg Fonts</title>
+
+  <indexterm zone="xorg7-font">
+    <primary sortas="a-xorg7-font">Xorg Fonts</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to Xorg Fonts</title>
+
+    <para>
+      The Xorg font packages provide some scalable
+      fonts and supporting packages for Xorg
+      applications. Many people will want to install other TTF or OTF fonts in
+      addition to, or instead of, these. Some are listed at <ulink
+      url="&blfs-svn;/x/TTF-and-OTF-fonts.html">TTF-and-OTF-fonts</ulink>.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&x7fonts-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Xorg Fonts Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="xcursor-themes"/>
+    </para>
+
+  </sect2>
+
+  <sect2>
+    <title>Downloading Xorg Fonts</title>
+
+    <para>
+      First, create a list of files to be downloaded. This file will also
+      be used to verify the integrity of the downloads when complete:
+    </para>
+
+<screen><userinput>cat &gt; x7font-&xorg-version;-list &lt;&lt; "EOF"
+<literal>font-util-&font-util-version;.tar.xz
+encodings-&encodings-version;.tar.xz
+font-alias-&font-alias-version;.tar.xz
+font-adobe-utopia-type1-&font-adobe-utopia-type1-version;.tar.xz
+font-bh-ttf-&font-bh-ttf-version;.tar.xz
+font-bh-type1-&font-bh-type1-version;.tar.xz
+font-ibm-type1-&font-ibm-type1-version;.tar.xz
+font-misc-ethiopic-&font-misc-ethiopic-version;.tar.xz
+font-xfree86-type1-&font-xfree86-type1-version;.tar.xz</literal>
+EOF</userinput></screen>
+
+    <para>
+      To download the needed files using <xref linkend='wget'/>,
+      use the following commands:
+    </para>
+
+<screen><userinput>mkdir x7font &amp;&amp;
+cd x7font &amp;&amp;
+grep -v '^#' ../x7font-&xorg-version;-list | wget -i- -c \
+    -B &x7fonts-download;</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of Xorg Fonts</title>
+
+&as_root;
+
+    <para>
+      First, start a subshell that will exit on error:
+    </para>
+
+<screen><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install all of the packages by running the following commands:
+    </para>
+
+<screen><userinput>for package in $(grep -v '^#' ../x7font-&xorg-version;-list)
+do
+  packagedir=${package%.tar.?z*}
+  tar -xf $package
+  pushd $packagedir
+    ./configure $XORG_CONFIG
+    make
+    as_root make install
+  popd
+  as_root rm -rf $packagedir
+done</userinput></screen>
+
+    <para>
+      Finally, exit the shell that was started earlier:
+    </para>
+
+<screen><userinput>exit</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>bdftruncate and ucs2any</seg>
+        <seg>None</seg>
+        <seg>/usr/share/fonts</seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="bdftruncate-x7">
+        <term><command>bdftruncate</command></term>
+        <listitem>
+          <para>
+            generates a truncated BDF font from an ISO 10646-1 encoded BDF font
+          </para>
+          <indexterm zone="xorg7-font bdftruncate-x7">
+            <primary sortas="b-bdftruncate">bdftruncate</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="ucs2any-x7">
+        <term><command>ucs2any</command></term>
+        <listitem>
+          <para>
+            generates BDF fonts in any encoding from an ISO 10646-1 encoded
+            BDF font
+          </para>
+          <indexterm zone="xorg7-font ucs2any-x7">
+            <primary sortas="b-ucs2any">ucs2any</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

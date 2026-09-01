@@ -1,0 +1,655 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+]>
+
+<sect1 id="gstreamer" xreflabel="GStreamer-&gstreamer-version;">
+  <?dbhtml filename="gstreamer.html"?>
+
+  <title>GStreamer-&gstreamer-version;</title>
+
+  <indexterm zone="gstreamer">
+    <primary sortas="a-gstreamer">GStreamer</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to GStreamer</title>
+
+    <para>
+      GStreamer is a multimedia framework that enables applications to share a
+      common set of plugins for tasks such as video encoding and decoding,
+      audio encoding and decoding, audio and video filters, audio
+      visualisation, web streaming and anything else that streams in real-time
+      or otherwise. This page provides most of the set of packages for ease of
+      installation as they mostly have the same instructions.
+    </para>
+
+    &long-build-time;
+
+    &meson-cross;
+
+    <bridgehead renderas="sect3">GStreamer Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="ffmpeg"/> and
+      <xref linkend="glib2"/>
+    </para>
+
+    <para role="recommended">
+      <xref linkend="alsa-lib"/>,
+      <ulink url="&blfs-svn;/multimedia/cdparanoia.html">CDParanoia-III</ulink>
+      (for building the CDDA plugin),
+      <ulink url="&blfs-svn;/x/cairo.html">Cairo</ulink>,
+      <xref linkend="flac"/>,
+      <ulink url="&blfs-svn;/x/gdk-pixbuf.html">gdk-pixbuf</ulink>,
+      &gobject-introspection;,
+      <ulink url="&blfs-svn;/general/iso-codes.html">ISO Codes</ulink>,
+      <xref linkend="lame"/>,
+      <ulink url="&blfs-svn;/multimedia/liba52.html">liba53</ulink> (needed to
+      play DVD's),
+      <xref linkend="libaom"/>,
+      <ulink url="&blfs-svn;/multimedia/libdvdread.html">libdvdread</ulink>,
+      <ulink url="&blfs-svn;/multimedia/libdvdnav.html">libdvdnav</ulink>,
+      <ulink url="&blfs-svn;/general/libgudev.html">libgudev</ulink>,
+      <ulink url="&blfs-svn;/general/libjpeg.html">libjpeg-turbo</ulink>,
+      <ulink url="&blfs-svn;/basicnet/libsoup.html">libsoup-2</ulink>,
+      <ulink url="&blfs-svn;/basicnet/libsoup3.html">libsoup-3</ulink>,
+      <xref linkend="libva"/>,
+      <xref linkend="libogg"/>,
+      <xref linkend="libpng"/>,
+      <xref linkend="libvorbis"/>,
+      <xref linkend="libvpx"/>,
+      <xref linkend="mpg123"/>,
+      <xref linkend="nasm"/>,
+      &opengl;,
+      <ulink url="&blfs-svn;/x/pango.html">Pango</ulink>,
+      <xref linkend="pulseaudio"/>,
+      <ulink url="&blfs-svn;/multimedia/soundtouch.html">SoundTouch</ulink>,
+      <xref linkend="svt-av1"/>,
+      <xref linkend="wayland-protocols"/>,
+      <xref linkend="x264"/>,
+      <xref linkend="xorg7-lib"/>, and
+      <ulink url="&blfs-svn;/general/yasm.html">yasm</ulink>
+   </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/general/aalib.html">AAlib</ulink>,
+      &cuda; (for GPU
+      acceleration with NVIDIA GPUs),
+      <ulink url="&blfs-svn;/x/graphene.html">graphene</ulink>,
+      <ulink url="&blfs-svn;/x/gtk3.html">GTK-3</ulink> (for examples),
+      <ulink url="&blfs-svn;/multimedia/libcdio.html">libcdio</ulink> (for
+      CD-ROM drive access),
+      <ulink url="&blfs-svn;/multimedia/libdv.html">libdv</ulink>,
+      <ulink url="&slfs-website;/general/libvpl.html">libvpl</ulink> (for
+      GPU acceleration with Intel GPUs),
+      <ulink url="&blfs-svn;/multimedia/libmpeg2.html">libmpeg2</ulink>,
+      <ulink url="&blfs-svn;/basicnet/libnsl.html">libnsl</ulink>,
+      <xref linkend="libunwind"/>,
+      <xref linkend="opus"/>,
+      <ulink url="https://&lfs-domainname;/blfs/view/12.1/x/qt5.html">Qt-5</ulink>,
+      <ulink url="&blfs-svn;/x/qt6.html">Qt-6</ulink>,
+      <xref linkend="rustc"/> (for IEEE 1588:2008 PTP clock support),
+      &sdl2;,
+      <xref linkend="speex"/>,
+      <ulink url="&blfs-svn;/multimedia/taglib.html">taglib</ulink>,
+      <ulink url="&blfs-svn;/general/valgrind.html">Valgrind</ulink>,
+      <ulink url="&blfs-svn;/multimedia/v4l-utils.html">v4l-utils</ulink>,
+      <xref linkend="wayland"/>,
+      <ulink url="https://www.alsa-project.org/files/pub/oss-lib">alsa-oss</ulink>,
+      <ulink url="https://github.com/scop/bash-completion/">bash-completion</ulink>,
+      <ulink url="https://pypi.org/project/hotdoc/">hotdoc</ulink>,
+      <ulink url="https://jackaudio.org/">JACK</ulink>,
+      <ulink url="https://sourceforge.net/projects/libavc1394/">libavc1394</ulink>,
+      <ulink url="https://github.com/cacalabs/libcaca">libcaca</ulink>,
+      <ulink url="https://sourceware.org/elfutils/">libdw</ulink>,
+      <ulink url="https://sourceforge.net/projects/libraw1394/">libiec61883</ulink>,
+      <ulink url="https://sourceforge.net/projects/libraw1394/">libraw1394</ulink>,
+      <ulink url="https://www.icecast.org">libshout</ulink>,
+      <ulink url="https://packages.debian.org/source/sid/libsidplay">libsidplay</ulink>,
+      <ulink url="http://www.theora.org">libtheora</ulink>,
+      <ulink url="http://libvisual.org/">libvisual</ulink>,
+      <ulink url="https://gstreamer.freedesktop.org/src/orc/">Orc</ulink>,
+      <ulink url="https://wiki.xiph.org/Tremor">Tremor</ulink>,
+      <ulink url="https://www.twolame.org/">TwoLame</ulink>, and
+      <ulink url="https://wavpack.com/">WavPack</ulink>
+    </para>
+
+    <note><para>
+      The optional list is not complete. See <ulink
+      url="&blfs-svn;/multimedia/gst10-plugins-bad.html">
+      BLFS' gst-plugins-bad</ulink> for dependencies that are missing from the
+      list.
+    </para></note>
+
+    <bridgehead renderas="sect3">BLFS Equivalent Packages</bridgehead>
+    <para>This combined page installs what would be in BLFS:</para>
+    <itemizedlist>
+      <listitem><para>
+        <ulink url="&blfs-svn;/multimedia/gstreamer10.html">gstreamer</ulink>
+      </para></listitem>
+      <listitem><para>
+        <ulink url="&blfs-svn;/multimedia/gst10-plugins-base.html">gst-plugins-base</ulink>
+      </para></listitem>
+      <listitem><para>
+        <ulink url="&blfs-svn;/multimedia/gst10-plugins-good.html">gst-plugins-good</ulink>
+      </para></listitem>
+      <listitem><para>
+        <ulink url="&blfs-svn;/multimedia/gst10-plugins-bad.html">gst-plugins-bad</ulink>
+      </para></listitem>
+      <listitem><para>
+        <ulink url="&blfs-svn;/multimedia/gst10-plugins-ugly.html">gst-plugins-ugly</ulink>
+      </para></listitem>
+      <listitem><para>
+        <ulink url="&blfs-svn;/multimedia/gst10-libav.html">gst-libav</ulink>
+      </para></listitem>
+    </itemizedlist>
+    <para>This page does not include <ulink
+    url="&blfs-svn;/multimedia/gst10-plugins-rs.html">gst-plugins-rs</ulink>.
+    It provides a GTK-4 binding and a dav1d plugin. If you need them, see the
+    linked page in BLFS.</para>
+
+  </sect2>
+
+  <sect2>
+    <title>Downloading GStreamer</title>
+
+    <para>
+      First create a list of files that will be downloaded:
+    </para>
+
+<screen><userinput>cat &gt; gstreamer-&gstreamer-version;-list &lt;&lt; EOF
+<literal>gstreamer/gstreamer-&gstreamer-version;.tar.xz
+gst-plugins-base/gst-plugins-base-&gstreamer-version;.tar.xz
+gst-plugins-good/gst-plugins-good-&gstreamer-version;.tar.xz
+gst-plugins-bad/gst-plugins-bad-&gstreamer-version;.tar.xz
+gst-plugins-ugly/gst-plugins-ugly-&gstreamer-version;.tar.xz
+gst-libav/gst-libav-&gstreamer-version;.tar.xz</literal>
+EOF</userinput></screen>
+
+    <para>
+      To download the needed files using <xref linkend="wget"/>, use the
+      following commands:
+    </para>
+
+<screen><userinput>mkdir gstreamer &amp;&amp;
+cd    gstreamer &amp;&amp;
+grep -v '^#' ../gstreamer-&gstreamer-version;-list | wget -i- -c \
+    -B &gstreamer-dl;/</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of GStreamer</title>
+
+    &as_root;
+
+    <para>
+      First do a test to see if GStreamer is installed, and if it is, remove
+      the previous installation
+      <footnote><para>
+        Removal of previous installation is required or else processes may
+        hang or not function properly due to mixed versions being installed.
+      </para></footnote>:
+    </para>
+
+<screen><userinput>pkgconf gstreamer-1.0
+if test x"$?" = x"0"; then
+  as_root rm -rvf /usr/bin/gst-* /usr/{lib,libexec}/gstreamer-1.0
+fi</userinput></screen>
+
+    <para>
+      Now start a subshell that will exit on error:
+    </para>
+
+<screen><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install all of the packages by running the following commands:
+    </para>
+
+<screen><userinput>for package in $(grep -v '^#' ../gstreamer-&gstreamer-version;-list)
+do
+  package=$(basename "$package")
+  packagedir=${package%.tar.?z*}
+  echo "Building $packagedir"
+  tar -xf $package
+  pushd $packagedir
+
+  case $packagedir in
+    gstreamer-[0-9]* )
+      extraflags="-D gst_debug=false"
+    ;;
+    gst-plugins-base-[0-9]* )
+      extraflags="--wrap-mode=nodownload"
+    ;;
+    gst-plugins-bad-[0-9]* )
+      extraflags="-D gpl=enabled -D gsm=disabled"
+    ;;
+    gst-plugins-ugly-[0-9]* )
+      extraflags="-D gpl=enabled"
+    ;;
+    * )
+      extraflags=
+    ;;
+  esac
+
+  mkdir build
+  cd    build
+    meson setup --prefix=/usr       \
+                --buildtype=release \
+                $(echo $extraflags) \
+                ..
+    ninja
+    as_root ninja install
+  popd
+  rm -rf $packagedir
+done</userinput></screen>
+
+    <para>
+      Finally, exit the shell that was started earlier:
+    </para>
+
+<screen><userinput>exit</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>lib32 Installation of GStreamer</title>
+
+    <para>
+      First do a test to see if GStreamer is installed, and if it is, remove
+      the previous installation:
+    </para>
+
+<screen><userinput>i686-pc-linux-gnu-pkg-config gstreamer-1.0
+if test x"$?" = x"0"; then
+  as_root rm -rvf /usr/lib32/gstreamer-1.0
+fi</userinput></screen>
+
+    <para>
+      Now start a subshell that will exit on error:
+    </para>
+
+<screen><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install all of the packages by running the following commands:
+    </para>
+
+<screen><userinput>for package in $(grep -v '^#' ../gstreamer-&gstreamer-version;-list)
+do
+  package=$(basename "$package")
+  packagedir=${package%.tar.?z*}
+  echo "Building lib32-$packagedir"
+  tar -xf $package
+  pushd $packagedir
+
+  case $packagedir in
+    gstreamer-[0-9]* )
+      extraflags="-D gst_debug=false"
+    ;;
+    gst-plugins-base-[0-9]* )
+      extraflags="--wrap-mode=nodownload -D qt5=disabled"
+    ;;
+     gst-plugins-good-[0-9]* )
+      extraflags="$([ -f /usr/lib32/libmp3lame.so ] || echo "-D lame=disabled")"
+      extraflags+=" -D qt5=disabled -D qt6=disabled"
+    ;;
+    gst-plugins-bad-[0-9]* )
+      extraflags="-D gpl=enabled -D gsm=disabled"
+    ;;
+    gst-plugins-ugly-[0-9]* )
+      extraflags="-D gpl=enabled"
+    ;;
+    * )
+      extraflags=
+    ;;
+  esac
+
+  mkdir build
+  cd    build
+    meson setup --prefix=/usr       \
+                --buildtype=release \
+                --cross-file=lib32  \
+                $(echo $extraflags) \
+                .. 
+    ninja
+    DESTDIR=$PWD/DESTDIR ninja install
+    as_root cp -vR DESTDIR/usr/lib32/* /usr/lib32
+    rm -rf DESTDIR
+  popd
+  rm -rf $packagedir
+  as_root /sbin/ldconfig
+done</userinput></screen>
+
+    <para>
+      Finally, exit the shell that was started earlier:
+    </para>
+
+<screen><userinput>exit</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D gpl=enabled</parameter>: Without this switch, plugins with
+      dependencies on (A)GPL licensed libraries are not built.
+    </para>
+
+    <para>
+      <parameter>-D gsm=disabled</parameter>: This switch disables linking to
+      the GSM library if it is installed, as it will cause a build failure.
+    </para>
+
+    <para>
+      <parameter>-D qt{5,6}=disabled</parameter>: On a multilib system, while
+      Qt-5 or Qt-6 may be installed, it is far less likely for them to be
+      installed for lib32. <command>meson</command> falsely detects them being
+      installed if 64-bit installations are detected, which leads to linker
+      errors. If you have installed lib32-Qt-{5,6}, remove these parameters.
+    </para>
+
+    <para>
+      <command>$([ -f /usr/lib32/libmp3lame.so ] ...</command>: This command
+      searches for a library from one of the recommended dependencies, and if
+      it can't find the library, the command invokes <parameter>-D lame=disabled
+      </parameter> to disable LAME support for the 32-bit build as
+      <command>meson</command> can't detect if it is the right architecture or
+      not.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Libraries</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          gst-device-monitor-1.0,
+          gst-discoverer-1.0,
+          gst-inspect-1.0,
+          gst-launch-1.0,
+          gst-play-1.0,
+          gst-stats-1.0,
+          gst-tester-1.0,
+          gst-transcoder-1.0,
+          gst-typefind-1.0, and
+          playout
+        </seg>
+        <seg>
+          libgstadaptivedemux-1.0,
+          libgstallocators-1.0,
+          libgstanalytics-1.0,
+          libgstapp-1.0,
+          libgstaudio-1.0,
+          libgstbadaudio-1.0,
+          libgstbase-1.0,
+          libgstbasecamerabinsrc-1.0,
+          libgstcheck-1.0,
+          libgstcodecparsers-1.0,
+          libgstcodecs-1.0,
+          libgstcontroller-1.0,
+          libgstcuda-1.0,
+          libgstdxva-1.0,
+          libgstfft-1.0,
+          libgstgl-1.0,
+          libgstinsertbin-1.0,
+          libgstisoff-1.0,
+          libgstmpegts-1.0,
+          libgstmse-1.0,
+          libgstnet-1.0,
+          libgstpbutils-1.0,
+          libgstphotography-1.0,
+          libgstplay-1.0,
+          libgstplayer-1.0,
+          libgstreamer-1.0,
+          libgstriff-1.0,
+          libgstrtp-1.0,
+          libgstrtsp-1.0,
+          libgstsctp-1.0,
+          libgstsdp-1.0,
+          libgsttag-1.0,
+          libgsttranscoder-1.0,
+          libgsturidownloader-1.0,
+          libgstva-1.0,
+          libgstvideo-1.0,
+          libgstwayland-1.0,
+          libgstwebrtc-1.0,
+          and several plugins under /usr/lib{,32}/gstreamer-1.0
+        </seg>
+        <seg>
+          /usr/include/gstreamer-1.0/gst/{allocators,app,audio,fft,gl,pbutils},
+          /usr/include/gstreamer-1.0/gst/{audio,basecamerabinsrc,cuda},
+          /usr/include/gstreamer-1.0/gst/{codecparsers,insertbin,interfaces},
+          /usr/include/gstreamer-1.0/gst/{isoff,mpegts,play,player,sctp},
+          /usr/include/gstreamer-1.0/gst/{riff,rtp,rtsp,sdp,tag,video},
+          /usr/include/gstreamer-1.0/gst/{transcoder,uridownloader,va},
+          /usr/include/gstreamer-1.0/gst/{wayland,webrtc},
+          /usr/share/gst-plugins-base,
+          /usr/share/gstreamer-1.0/presets, and
+          /usr/{include,lib{,32},libexec,share}/gstreamer-1.0
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="gst-device-monitor-1.0">
+        <term><command>gst-device-monitor-1.0</command></term>
+        <listitem>
+          <para>
+            is a command line tool that can be used to test
+            GStreamer's device monitoring functionality
+          </para>
+          <indexterm zone="gstreamer gst-device-monitor-1.0">
+            <primary sortas="b-gst-device-monitor-1.0">gst-device-monitor-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry id="gst-discoverer-1.0">
+        <term><command>gst-discoverer-1.0</command></term>
+        <listitem>
+          <para>
+            is a tool that can be used to print basic metadata and
+            stream information about a media file
+          </para>
+          <indexterm zone="gstreamer gst-discoverer-1.0">
+            <primary sortas="b-gst-discoverer-1.0">gst-discoverer-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gst-inspect-1.0">
+        <term><command>gst-inspect-1.0</command></term>
+        <listitem>
+          <para>
+            is a tool that prints out information on available
+            GStreamer plugins,
+            information about a particular plugin, or information
+            about a particular element
+          </para>
+          <indexterm zone="gstreamer gst-inspect-1.0">
+            <primary sortas="b-gst-inspect-1.0">gst-inspect-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gst-launch-1.0">
+        <term><command>gst-launch-1.0</command></term>
+        <listitem>
+          <para>
+            is a tool that builds and runs basic
+            GStreamer pipelines
+          </para>
+          <indexterm zone="gstreamer gst-launch-1.0">
+            <primary sortas="b-gst-launch-1.0">gst-launch-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry id="gst-play-1.0">
+        <term><command>gst-play-1.0</command></term>
+        <listitem>
+          <para>
+            is a command line tool that can be used to test basic
+            playback using the playbin element
+          </para>
+          <indexterm zone="gstreamer gst-play-1.0">
+            <primary sortas="b-gst-play-1.0">gst-play-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gst-stats-1.0">
+        <term><command>gst-stats-1.0</command></term>
+        <listitem>
+          <para>
+            is a tool used to gather statistics about
+            GStreamer operations
+          </para>
+          <indexterm zone="gstreamer gst-stats-1.0">
+            <primary sortas="b-gst-stats-1.0">gst-stats-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gst-tester-1.0">
+        <term><command>gst-tester-1.0</command></term>
+        <listitem>
+          <para>
+            runs a test plan in TAP compatible format while integrating with
+            the meson test harness
+          </para>
+          <indexterm zone="gstreamer gst-tester-1.0">
+            <primary sortas="b-gst-tester-1.0">gst-tester-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gst-transcoder-1.0">
+        <term><command>gst-transcoder-1.0</command></term>
+        <listitem>
+          <para>
+            is used to transcode a stream into a different format
+          </para>
+          <indexterm zone="gstreamer gst-transcoder-1.0">
+            <primary sortas="b-gst-transcoder-1.0">gst-transcoder-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="gst-typefind-1.0">
+        <term><command>gst-typefind-1.0</command></term>
+        <listitem>
+          <para>
+            uses the GStreamer type finding system
+            to determine the relevant GStreamer
+            plugin to parse or decode files, and the corresponding MIME type
+          </para>
+          <indexterm zone="gstreamer gst-typefind-1.0">
+            <primary sortas="b-gst-typefind-1.0">gst-typefind-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="playout">
+        <term><command>playout</command></term>
+        <listitem>
+          <para>
+            is an example application used to sequentially play a list of
+            audio-video files
+          </para>
+          <indexterm zone="gstreamer playout">
+            <primary sortas="b-playout">playout</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgstbase-1.0">
+        <term><filename class="libraryfile">libgstbase-1.0</filename></term>
+        <listitem>
+          <para>
+            provides some base classes to be extended by elements and utility
+            classes that are most useful for plugin developers
+          </para>
+          <indexterm zone="gstreamer libgstbase-1.0">
+            <primary sortas="c-libgstbase-1.0">libgstbase-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgstcheck-1.0">
+        <term><filename class="libraryfile">libgstcheck-1.0</filename></term>
+        <listitem>
+          <para>
+            provides functionality for writing unit tests that use the check
+            framework
+          </para>
+          <indexterm zone="gstreamer libgstcheck-1.0">
+            <primary sortas="c-libgstcheck-1.0">libgstcheck-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgstcontroller-1.0">
+        <term><filename class="libraryfile">libgstcontroller-1.0</filename></term>
+        <listitem>
+          <para>
+            provides functionality to animate element properties over time
+          </para>
+          <indexterm zone="gstreamer libgstcontroller-1.0">
+            <primary sortas="c-libgstcontroller-1.0">libgstcontroller-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgstnet-1.0">
+        <term><filename class="libraryfile">libgstnet-1.0</filename></term>
+        <listitem>
+          <para>
+            provides network elements and objects
+          </para>
+          <indexterm zone="gstreamer libgstnet-1.0">
+            <primary sortas="c-libgstnet-1.0">libgstnet-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libgstreamer-1.0">
+        <term><filename class="libraryfile">libgstreamer-1.0</filename></term>
+        <listitem>
+          <para>
+            provides all of the core GStreamer
+            services, including initialization, plugin management and types,
+            as well as the object hierarchy that defines elements and bins,
+            along with some more specialized elements
+          </para>
+          <indexterm zone="gstreamer libgstreamer-1.0">
+            <primary sortas="c-libgstreamer-1.0">libgstreamer-1.0</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../../general.ent">
+  %general-entities;
+
+  <!ENTITY xwayland-download "&xorg-dl;/xserver/xwayland-&xwayland-version;.tar.xz">
+]>
+
+<sect1 id="xwayland" xreflabel="Xwayland-&xwayland-version;">
+  <?dbhtml filename="xwayland.html"?>
+
+  <title>Xwayland-&xwayland-version;</title>
+
+  <indexterm zone="xwayland">
+    <primary sortas="a-xwayland">xwayland</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to Xwayland</title>
+
+    <para>
+      The Xwayland package is an Xorg server
+      running on top of the wayland server. It has been separated from the
+      main Xorg server package. It allows running X clients inside a
+      wayland session.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&xwayland-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/xwayland/xwayland-&xwayland-version;-dri.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Xwayland Dependencies</bridgehead>
+
+    <para role="required">
+      A userland graphics driver (<xref linkend='mesa'/> and/or
+      &nvidia;) (runtime),
+      <xref linkend="libxcvt"/>,
+      <xref linkend="pixman"/>,
+      <xref linkend="wayland-protocols"/>,
+      <xref role='runtime' linkend="xorg7-app"/> (runtime), and
+      <xref linkend="xorg7-font"/> (only font-util)
+    </para>
+
+    <para role="recommended">
+      <xref linkend="libepoxy"/>,
+      &gbm;, and
+      &opengl;
+    </para>
+
+    <para role="optional">
+      <xref linkend="mesa"/> (for loading GLX llvmpipe/softpipe drivers) and
+      <xref linkend="nettle"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of Xwayland</title>
+
+    <para>
+      Allow building the package if the DRI interface isn't installed (used for
+      Mesa software drivers) by applying a patch:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../xwayland-&xwayland-version;-dri.patch</userinput></screen>
+
+<!--
+    &x-nettle;
+-->
+
+    <para>
+      Install xwayland by running the following
+      commands:
+    </para>
+
+<screen><userinput>sed -i '/install_man/,$d' meson.build &amp;&amp;
+
+mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr                  \
+            --buildtype=release            \
+            -D xkb_output_dir=/var/lib/xkb \
+            -D secure-rpc=false            \
+            .. &amp;&amp;
+
+ninja</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput><userinput
+  revision="sysv"> &amp;&amp;
+&install-sudir; /tmp/.X11-unix &amp;&amp;
+if [ -z "$(grep .X11-unix /etc/sysconfig/createfiles)" ]; then
+cat &gt;&gt; /etc/sysconfig/createfiles &lt;&lt; "EOF"
+<literal>/tmp/.X11-unix dir 1777 root root</literal>
+EOF
+fi</userinput></screen>
+
+    <para>
+      If <xref linkend='xorg-server'/> is not installed and you do not plan
+      to install it later, you can install <command>Xvfb</command> from this
+      package.  As the &root; user:
+    </para>
+
+<screen role="nodump"><userinput>&install-exec; hw/vfb/Xvfb -t /usr/bin/</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+    <para>
+      <command>sed -i '/install_man/,$d' meson.build</command>: Prevents
+      installing a manual page for <command>Xserver</command>,
+      which is also provided by <xref linkend='xorg-server'/>.  Remove this
+      command if <xref linkend='xorg-server'/> is not installed and you
+      don't plan to install it later.
+    </para>
+
+    &meson-buildtype-release;
+
+    <para>
+      <parameter>-D secure-rpc=false</parameter>: Disables RPC support
+      as <ulink url="&blfs-svn;/basicnet/libtirpc.html">libtirpc</ulink>
+      was not built.
+    </para>
+
+    <para revision="sysv">
+      <command>cat &gt;&gt; /etc/sysconfig/createfiles...</command>: This
+      command creates the <filename class="directory">/tmp/.X11-unix</filename>
+      directory at startup, and ensures that the permissions and ownership
+      are correct as required by applications using Xwayland.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Program</segtitle>
+      <segtitle>Installed Library</segtitle>
+      <segtitle>Installed Directory</segtitle>
+
+      <seglistitem>
+        <seg>
+          Xwayland
+        </seg>
+        <seg>
+          None
+        </seg>
+        <seg>
+          None
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="Xwayland">
+        <term><command>Xwayland</command></term>
+        <listitem>
+          <para>
+            is a minimal X server that can run on top of Wayland to allow Xorg
+            clients to execute
+          </para>
+          <indexterm zone="xwayland Xwayland">
+            <primary sortas="b-Xwayland">Xwayland</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+</sect1>

@@ -32,17 +32,17 @@ jobs:
           sudo apt update
           sudo apt -y install libxml2 libxml2-utils libxslt1.1 xsltproc docbook-xsl docbook-xsl-ns docbook-xsl-doc-html tidy make
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Build
         run: |
           pwd
           echo $default-branch
           make WORKFLOW=y V=1
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: /home/runner/public_html/glfs
 
@@ -56,4 +56,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

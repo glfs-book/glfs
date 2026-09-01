@@ -49,7 +49,8 @@
 <literal>doitsujin/dxvk/archive/v&dxvk-version;/dxvk-&dxvk-version;.tar.gz
 doitsujin/libdisplay-info/archive/&dxvk-libdisplay-info;.tar.gz
 KhronosGroup/SPIRV-Headers/archive/&dxvk-spirv;.tar.gz
-KhronosGroup/Vulkan-Headers/archive/&dxvk-vulkan;.tar.gz</literal>
+KhronosGroup/Vulkan-Headers/archive/&dxvk-vulkan;.tar.gz
+doitsujin/dxbc-spirv/archive/&dxvk-dxbc-spirv;.tar.gz</literal>
 EOF</userinput></screen>
 
     <para>
@@ -80,12 +81,16 @@ done</userinput></screen>
       moved in place. Do so now:
     </para>
 
-<screen><userinput>mv -T libdisplay-info-*                       \
-      dxvk-&dxvk-version;/subprojects/libdisplay-info &amp;&amp;
-mv -T SPIRV-Headers-*                         \
-      dxvk-&dxvk-version;/include/spirv               &amp;&amp;
-mv -T Vulkan-Headers-*                        \
-      dxvk-&dxvk-version;/include/vulkan</userinput></screen>
+<screen><userinput>mv -T  libdisplay-info-*                                      \
+       dxvk-&dxvk-version;/subprojects/libdisplay-info                  &amp;&amp;
+cp -RT SPIRV-Headers-&dxvk-spirv; \
+       dxvk-&dxvk-version;/include/spirv                                &amp;&amp;
+mv -T  Vulkan-Headers-*                                       \
+       dxvk-&dxvk-version;/include/vulkan                               &amp;&amp;
+mv -T  dxbc-spirv-*                                           \
+       dxvk-&dxvk-version;/subprojects/dxbc-spirv                       &amp;&amp;
+mv -T  SPIRV-Headers-*                                        \
+       dxvk-&dxvk-version;/subprojects/dxbc-spirv/submodules/spirv_headers</userinput></screen>
 
     <para>
       Go into the <filename class="directory">dxvk-&dxvk-version;</filename>
@@ -104,8 +109,7 @@ mv -T Vulkan-Headers-*                        \
       <title>64-bit Installation</title>
 
       <para>
-        Install 64-bit DXVK by running
-        the following commands:
+        Install 64-bit DXVK by running the following commands:
       </para>
 
 <screen><userinput>mkdir build-win64 &amp;&amp;
@@ -132,8 +136,7 @@ mkdir   -pv     /usr/lib/dxvk/win64 &amp;&amp;
       <title>32-bit Installation</title>
 
       <para>
-        Install 32-bit DXVK by running
-        the following commands:
+        Install 32-bit DXVK by running the following commands:
       </para>
 
 <screen><userinput>mkdir build-win32 &amp;&amp;

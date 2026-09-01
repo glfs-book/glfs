@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY openrc-root     "https://github.com/OpenRC/openrc/archive">
+  <!ENTITY openrc-download "&openrc-root;/&openrc-version;/openrc-&openrc-version;.tar.gz">
+]>
+
+<sect1 id="openrc" revision="openrc" xreflabel="OpenRC-&openrc-version;">
+  <?dbhtml filename="openrc.html"?>
+
+  <title>OpenRC-&openrc-version;</title>
+
+  <indexterm zone="openrc">
+    <primary sortas="a-openrc">OpenRC</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to OpenRC</title>
+
+    <para>
+      OpenRC was already built in LFS/MLFS, but without Linux-PAM support. When
+      PAM is enabled in OpenRC, it allows for user services, which some
+      packages expect and makes using the system much easier.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&openrc-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/openrc/openrc-&openrc-version;-lock-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">OpenRC Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="linux-pam"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of OpenRC</title>
+
+    <para>
+      Apply a patch to make the group which manages <filename
+      class="directory">/run/lock</filename> configurable:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../openrc-&openrc-version;-lock-1.patch</userinput></screen>
+
+    <para>
+      Fix a script to allow a normal installation:
+    </para>
+
+<screen><userinput>sed -i '/set -u/d' tools/meson_final.sh</userinput></screen>
+
+    <para>
+      Install OpenRC by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=/usr       \
+            --buildtype=release \
+            -D uucp_group=root  \
+            .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>mv -v  /etc/conf.d{,.tmp}            &amp;&amp;
+ninja install                        &amp;&amp;
+cp -vR /etc/conf.d.tmp/* /etc/conf.d &amp;&amp;
+rm -rf /etc/conf.d.tmp               &amp;&amp;
+mv -v  /usr/{s,}bin/rc-update</userinput></screen>
+
+    <para>
+      User services can be enabled in OpenRC with some setup. Some operations
+      have to be done as the &root; user, while others have to be done for each
+      user. Set up some groundwork as the &root; user:
+    </para>
+
+<screen role="root"><userinput>mkdir -pv /etc/user/{init,conf}.d</userinput></screen>
+
+    <para>
+      When you install a user service, you can enable it like so:
+    </para>
+
+<screen role="nodump"><userinput>&rc-user-add; <replaceable>&lt;SERVICE_NAME&gt;</replaceable> <replaceable>&lt;RUNLEVEL&gt;</replaceable></userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-meson;
+
+  </sect2>
+
+  <sect2 role="configuration">
+  <title>Configuring elogind</title>
+    <sect3><title>Configuration Information</title>
+
+    <para>
+      OpenRC and its helpers will need to associate with PAM. Help it by
+      creating PAM configurations as the &root; user:
+    </para>
+
+<screen role="root"><userinput>cat &gt;&gt; /etc/pam.d/system-session &lt;&lt; "EOF" &amp;&amp;
+<literal># Begin openrc addition
+
+session  optional    pam_openrc.so
+
+# End openrc addition</literal>
+EOF
+cat &gt; /etc/pam.d/system-login &lt;&lt; "EOF" &amp;&amp;
+<literal># Begin openrc addition
+
+session	 required   pam_env.so
+session	 optional   pam_elogind.so
+session	 optional   pam_openrc.so
+
+# End openrc addition</literal>
+EOF
+cat &gt; /etc/pam.d/openrc-user &lt;&lt; "EOF" &amp;&amp;
+<literal># Begin /etc/pam.d/openrc-user
+
+auth     required    pam_permit.so
+account  required    pam_unix.so
+session  required    pam_env.so
+session  required    pam_limits.so
+session  required    pam_unix.so
+session  optional    pam_elogind.so
+
+# End /etc/pam.d/openrc-user</literal>
+EOF
+
+for i in {start-stop,supervise}-daemon; do
+cat &gt; /etc/pam.d/$i &lt;&lt; "EOF"
+<literal>auth     sufficient   pam_permit.so
+account	 include      system-auth
+session	 optional     pam_loginuid.so
+session	 required     pam_limits.so
+session	 required     pam_env.so
+session	 required     pam_unix.so</literal>
+EOF
+done</userinput></screen>
+
+    </sect3>
+  </sect2>
+
+  <sect2 role="content" revision="openrc">
+    <title>Contents</title>
+
+    <note><para>
+      There are no new contents besides a PAM module. For the list of original
+      contents, see the MLFS OpenRC's <ulink
+      url="&mlfs-root;/chapter08/openrc.html#contents-openrc">Contents</ulink>.
+    </para></note>
+
+  </sect2>
+
+</sect1>

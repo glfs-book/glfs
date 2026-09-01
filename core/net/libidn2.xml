@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY libidn2-download "&gnu-http;/libidn/libidn2-&libidn2-version;.tar.gz">
+]>
+
+<!-- Try to keep the indentation used in this file-->
+<sect1 id="libidn2" xreflabel="libidn2-&libidn2-version;">
+  <?dbhtml filename="libidn2.html"?>
+
+
+  <title>libidn2-&libidn2-version;</title>
+
+  <indexterm zone="libidn2">
+    <primary sortas="a-libidn2">libidn2</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to libidn2</title>
+
+    <para>
+      libidn2 is a package designed for internationalized string handling based
+      on standards from the Internet Engineering Task Force (IETF)'s IDN
+      working group, designed for internationalized domain names.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&libidn2-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">libidn2 Dependencies</bridgehead>
+
+    <para role="recommended">
+      <xref linkend="libunistring"/>
+    </para>
+
+  </sect2>
+
+  <!--Required section-->
+  <sect2 role="installation">
+    <title>Installation of libidn2</title>
+
+    <para>
+      Install libidn2 by running the following commands:
+    </para>
+
+<screen><userinput>./configure --prefix=/usr --disable-static &amp;&amp;
+make</userinput></screen>
+
+    <para>
+      Now, as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>make install</userinput></screen>
+
+  </sect2>
+
+  <sect2>
+    <title>lib32 Installation of lib32-libidn2</title>
+
+    <para>
+      Install lib32-libidn2 by running the following commands:
+    </para>
+
+<screen><userinput>make distclean &amp;&amp;
+CC="gcc -m32" CXX="g++ -m32"         \
+PKG_CONFIG_PATH=/usr/lib32/pkgconfig \
+./configure --prefix=/usr            \
+            --libdir=/usr/lib32      \
+            --host=i686-pc-linux-gnu \
+            --disable-static &amp;&amp;
+
+make</userinput></screen>
+
+    <para>
+      Now as the <systemitem class="username">root</systemitem> user:
+    </para>
+
+<screen role="root"><userinput>make DESTDIR=$PWD/DESTDIR install     &amp;&amp;
+cp -vr DESTDIR/usr/lib32/* /usr/lib32 &amp;&amp;
+rm -rf DESTDIR                        &amp;&amp;
+ldconfig</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    &options-configure;
+
+    &static-libraries;
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Program</segtitle>
+      <segtitle>Installed Library</segtitle>
+      <segtitle>Installed Directory</segtitle>
+
+      <seglistitem>
+        <seg>
+          idn2
+        </seg>
+        <seg>
+          libidn2
+        </seg>
+        <seg>
+          None
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="idn2">
+        <term><command>idn2</command></term>
+        <listitem>
+          <para>
+            is a command line interface to the internationalized domain
+            library
+          </para>
+          <indexterm zone="libidn2 idn2">
+            <primary sortas="b-idn2">idn2</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry id="libidn2-lib">
+        <term><filename class="libraryfile">libidn2</filename></term>
+        <listitem>
+          <para>
+            contains a generic Stringprep implementation used for
+            internationalized string handling
+          </para>
+          <indexterm zone="libidn2 libidn2-lib">
+            <primary sortas="c-libidn2">libidn2</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </sect2>
+
+</sect1>

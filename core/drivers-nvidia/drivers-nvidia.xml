@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+  "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+ <!ENTITY % general-entities SYSTEM "../../general.ent">
+ %general-entities;
+]>
+
+<chapter id="drivers-nvidia">
+  <?dbhtml filename="drivers-nvidia.html"?>
+
+  <title>Graphics Drivers - NVIDIA</title>
+
+  <para>
+    This chapter covers installing the NVIDIA driver and its
+    hardware-accelerated components. If you are not installing NVIDIA, follow
+    the chapter for Mesa instead.
+  </para>
+
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nvidia-rev.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nv-codec-headers.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nvidia-vaapi-driver.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="current.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="current-intro.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nvidia.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cuda.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="r580.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="r580-intro.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="nvidia-r580.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cuda-r580.xml"/>
+
+</chapter>

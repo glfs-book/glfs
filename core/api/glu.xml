@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY glu-download "https://archive.mesa3d.org/glu/glu-&glu-version;.tar.xz">
+]>
+
+<sect1 id="glu" xreflabel="GLU-&glu-version;">
+  <?dbhtml filename="glu.html"?>
+
+  <title>GLU-&glu-version;</title>
+
+  <indexterm zone="glu">
+    <primary sortas="a-GLU">GLU</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to GLU</title>
+
+    <para>
+      This package provides the GL Utility library. This package isn't needed
+      by any other in the book, but this package in BLFS has instructions that
+      won't work on a system with libglvnd. Its installation is thus provided
+      here. If you want, you may skip this package. But when in BLFS or SLFS,
+      and a package lists GLU as a dependency, use this page for its
+      installation to ensure compatibility instead of the one in BLFS.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&glu-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <bridgehead renderas="sect3">GLU Dependencies</bridgehead>
+
+    <para role="required">
+      &opengl;
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of GLU</title>
+
+    <para>
+      Install GLU by running the following commands:
+    </para>
+
+<screen><userinput>mkdir build &amp;&amp;
+cd    build &amp;&amp;
+
+meson setup --prefix=$XORG_PREFIX                       \
+            --buildtype=release                         \
+            --default-library=shared                    \
+            $(pkgconf opengl || echo -D gl_provider=gl) \
+            .. &amp;&amp;
+ninja</userinput></screen>
+
+    <para>
+      Now, as the &root; user:
+    </para>
+
+<screen role="root"><userinput>ninja install</userinput></screen>
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    <para>
+      <parameter>--default_library=shared</parameter>: This parameter ensures
+      only the shared library is installed.
+    </para>
+
+    <para>
+      <command>$(pkgconf ...)</command>: These commands check if <filename
+      class="libraryfile">libOpenGL</filename> is provided, or else it
+      forces <filename class="libraryfile">libGL</filename> to be used instead.
+    </para>
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <segmentedlist>
+      <segtitle>Installed Programs</segtitle>
+      <segtitle>Installed Library</segtitle>
+      <segtitle>Installed Directories</segtitle>
+
+      <seglistitem>
+        <seg>
+          None
+        </seg>
+        <seg>
+          libGLU
+        </seg>
+        <seg>
+          None
+        </seg>
+      </seglistitem>
+    </segmentedlist>
+
+    <variablelist>
+      <bridgehead renderas="sect3">Short Descriptions</bridgehead>
+      <?dbfo list-presentation="list"?>
+      <?dbhtml list-presentation="table"?>
+
+      <varlistentry id="libGLU">
+        <term><filename class="libraryfile">libGLU</filename></term>
+        <listitem>
+          <para>
+            is the GL Utility library
+          </para>
+          <indexterm zone="glu libGLU">
+            <primary sortas="c-libGLU">libGLU</primary>
+          </indexterm>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </sect2>
+
+</sect1>

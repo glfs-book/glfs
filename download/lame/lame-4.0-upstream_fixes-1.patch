@@ -1,0 +1,178 @@
+Submitted by:            Zeckma
+Date:                    2026-08-02
+Initial Package Version: 4.0
+Origin:                  Upstream
+Upstream Status:         Applied
+Description:             Fixes multiple build failures and fixes some settings.
+
+diff '--color=auto' -Naurp lame-4.0.orig/frontend/parse.c lame-4.0/frontend/parse.c
+--- lame-4.0.orig/frontend/parse.c	2023-12-18 06:34:05.000000000 -0700
++++ lame-4.0/frontend/parse.c	2026-08-02 08:57:33.475434331 -0600
+@@ -402,40 +402,44 @@ static int getIntValue(char const* token
+ }
+ 
+ #ifdef ID3TAGS_EXTENDED
++/* Set an ID3v2 tag field from UTF-16 data. The data pointer is genuinely
++   UTF-16 here, so the UTF-16 id3tag_* setters are used throughout. */
+ static int
+-set_id3v2tag(lame_global_flags* gfp, TextEncoding enc, int type, unsigned short const* str)
++set_id3v2tag_utf16(lame_global_flags* gfp, int type, unsigned short const* str)
+ {
+-    switch (enc)
++    switch (type)
+     {
+-        case TENC_UTF8:
+-            switch (type)
+-            {
+-                case 'a': return id3tag_set_textinfo_utf8(gfp, "TPE1", str);
+-                case 't': return id3tag_set_textinfo_utf8(gfp, "TIT2", str);
+-                case 'l': return id3tag_set_textinfo_utf8(gfp, "TALB", str);
+-                case 'g': return id3tag_set_textinfo_utf8(gfp, "TCON", str);
+-                case 'c': return id3tag_set_comment_ucs2(gfp, 0, 0, str);
+-                case 'n': return id3tag_set_textinfo_utf8(gfp, "TRCK", str);
+-                case 'y': return id3tag_set_textinfo_utf8(gfp, "TYER", str);
+-                case 'v': return id3tag_set_fieldvalue_ucs2(gfp, str);
+-            }
+-            ;;
+-        case TENC_UTF16:
+-            switch (type)
+-            {
+                 case 'a': return id3tag_set_textinfo_utf16(gfp, "TPE1", str);
+-                case 't': return id3tag_set_textinfo_utf16(gfp, "TIT2", str);
+-                case 'l': return id3tag_set_textinfo_utf16(gfp, "TALB", str);
+-                case 'g': return id3tag_set_textinfo_utf16(gfp, "TCON", str);
+-                case 'c': return id3tag_set_comment_utf16(gfp, 0, 0, str);
+-                case 'n': return id3tag_set_textinfo_utf16(gfp, "TRCK", str);
+-                case 'y': return id3tag_set_textinfo_utf16(gfp, "TYER", str);
+-                case 'v': return id3tag_set_fieldvalue_utf16(gfp, str);
+-            }
+-            ;;
+-        default:
+-            return -3;
++        case 't': return id3tag_set_textinfo_utf16(gfp, "TIT2", str);
++        case 'l': return id3tag_set_textinfo_utf16(gfp, "TALB", str);
++        case 'g': return id3tag_set_textinfo_utf16(gfp, "TCON", str);
++        case 'c': return id3tag_set_comment_utf16(gfp, 0, 0, str);
++        case 'n': return id3tag_set_textinfo_utf16(gfp, "TRCK", str);
++        case 'y': return id3tag_set_textinfo_utf16(gfp, "TYER", str);
++        case 'v': return id3tag_set_fieldvalue_utf16(gfp, str);
++    }
++    return -3;
++}
++
++/* Set an ID3v2 tag field from UTF-8 data. The data pointer is a UTF-8 char
++   string (not UTF-16 as the old, mistyped single handler assumed), so the
++   UTF-8 id3tag_* setters are used - including id3tag_set_fieldvalue_utf8 for
++   'v', which replaces the removed *_ucs2 calls the UTF-8 path used to make. */
++static int
++set_id3v2tag_utf8(lame_global_flags* gfp, int type, char const* str)
++{
++    switch (type)
++    {
++        case 'a': return id3tag_set_textinfo_utf8(gfp, "TPE1", str);
++        case 't': return id3tag_set_textinfo_utf8(gfp, "TIT2", str);
++        case 'l': return id3tag_set_textinfo_utf8(gfp, "TALB", str);
++        case 'g': return id3tag_set_textinfo_utf8(gfp, "TCON", str);
++        case 'c': return id3tag_set_comment_utf8(gfp, 0, 0, str);
++        case 'n': return id3tag_set_textinfo_utf8(gfp, "TRCK", str);
++        case 'y': return id3tag_set_textinfo_utf8(gfp, "TYER", str);
++        case 'v': return id3tag_set_fieldvalue_utf8(gfp, str);
+     }
++    return -3;
+ }
+ #endif
+ 
+@@ -480,8 +484,8 @@ id3_tag(lame_global_flags* gfp, int type
+         default:
+ #ifdef ID3TAGS_EXTENDED
+         case TENC_LATIN1: result = set_id3tag(gfp, type, x);   break;
+-        case TENC_UTF16:  result = set_id3v2tag(gfp, enc, type, x); break;
+-        case TENC_UTF8:   result = set_id3v2tag(gfp, enc, type, x); break;
++        case TENC_UTF16:  result = set_id3v2tag_utf16(gfp, type, x); break;
++        case TENC_UTF8:   result = set_id3v2tag_utf8(gfp, type, x); break;
+ #else
+         case TENC_RAW:    result = set_id3tag(gfp, type, x);   break;
+ #endif
+diff '--color=auto' -Naurp lame-4.0.orig/include/lame.def lame-4.0/include/lame.def
+--- lame-4.0.orig/include/lame.def	2023-12-15 03:39:54.000000000 -0700
++++ lame-4.0/include/lame.def	2026-08-02 09:03:31.295620002 -0600
+@@ -306,3 +306,6 @@ id3tag_set_textinfo_utf8	@2028
+ ; two external functions for ID3v2.4 tag support
+ id3tag_add_v2_4_UTF8 @2029
+ id3tag_v2_4_UTF8_only @2030
++
++; UTF-8 field-value setter (companion to id3tag_set_fieldvalue_utf16)
++id3tag_set_fieldvalue_utf8 @2031
+diff '--color=auto' -Naurp lame-4.0.orig/include/lame.h lame-4.0/include/lame.h
+--- lame-4.0.orig/include/lame.h	2026-07-11 01:30:24.000000000 -0600
++++ lame-4.0/include/lame.h	2026-08-02 08:56:37.227931107 -0600
+@@ -1297,6 +1297,9 @@ int CDECL id3tag_set_fieldvalue_ucs2(lam
+ int CDECL id3tag_set_fieldvalue_utf16(lame_t gfp, const unsigned short *fieldvalue);
+ 
+ /* experimental */
++int CDECL id3tag_set_fieldvalue_utf8(lame_t gfp, const char *fieldvalue);
++
++/* experimental */
+ int CDECL id3tag_set_textinfo_utf16(lame_t gfp, char const *id, unsigned short const *text);
+ 
+ /* experimental */
+diff '--color=auto' -Naurp lame-4.0.orig/include/libmp3lame.sym lame-4.0/include/libmp3lame.sym
+--- lame-4.0.orig/include/libmp3lame.sym	2026-07-11 01:34:32.000000000 -0600
++++ lame-4.0/include/libmp3lame.sym	2026-08-02 09:11:53.329373917 -0600
+@@ -193,6 +193,7 @@ hip_decode_headers
+ hip_decode1
+ hip_decode1_headers
+ hip_decode1_headersB
++hip_finish_pinfo
+ lame_decode_init
+ lame_decode
+ lame_decode_headers
+@@ -229,6 +230,7 @@ id3tag_set_textinfo_ucs2
+ id3tag_set_comment_ucs2
+ id3tag_set_fieldvalue_ucs2
+ id3tag_set_fieldvalue_utf16
++id3tag_set_fieldvalue_utf8
+ id3tag_set_textinfo_utf16
+ id3tag_set_comment_utf16
+ id3tag_set_textinfo_utf8
+diff '--color=auto' -Naurp lame-4.0.orig/libmp3lame/id3tag.c lame-4.0/libmp3lame/id3tag.c
+--- lame-4.0.orig/libmp3lame/id3tag.c	2026-07-11 01:34:32.000000000 -0600
++++ lame-4.0/libmp3lame/id3tag.c	2026-08-02 09:05:05.678553445 -0600
+@@ -1844,6 +1844,21 @@ id3tag_set_fieldvalue_ucs2(lame_t gfp, c
+     return id3tag_set_fieldvalue_utf16(gfp, fieldvalue);
+ }
+ 
++int
++id3tag_set_fieldvalue_utf8(lame_t gfp, const char *fieldvalue)
++{
++    if (is_lame_internal_flags_null(gfp)) {
++        return 0;
++    }
++    if (fieldvalue && *fieldvalue) {
++        if (strlen(fieldvalue) < 5 || fieldvalue[4] != '=') {
++            return -1;
++        }
++        return id3tag_set_textinfo_utf8(gfp, fieldvalue, &fieldvalue[5]);
++    }
++    return 0;
++}
++
+ size_t
+ lame_get_id3v2_tag(lame_t gfp, unsigned char *buffer, size_t size)
+ {
+diff '--color=auto' -Naurp lame-4.0.orig/libmp3lame/lame.c lame-4.0/libmp3lame/lame.c
+--- lame-4.0.orig/libmp3lame/lame.c	2020-05-06 01:45:56.000000000 -0600
++++ lame-4.0/libmp3lame/lame.c	2026-08-02 09:12:34.360869889 -0600
+@@ -1050,6 +1050,12 @@ lame_init_params(lame_global_flags * gfp
+             if (gfp->quality < 0)
+                 gfp->quality = LAME_DEFAULT_QUALITY;
+ 
++            /* VBR and ABR don't give good results with noise shaping
++             * settings used in quality levels below 4.
++             */
++            if (gfp->quality < 4)
++                gfp->quality = 4;
++
+ 
+             if (cfg->vbr == vbr_off)
+                 (void) lame_set_VBR_mean_bitrate_kbps(gfp, gfp->brate);

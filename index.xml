@@ -10,12 +10,11 @@ $Date$
 
   <!-- Front Matter -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="book/bookinfo.xml"/>
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="book/dedication.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="book/preface.xml"/>
 
   <!-- Parts -->
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="introduction/introduction.xml"/>
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="shareddeps/shareddeps.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="core/core.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="steam/steamsec.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="wine/winesec.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="qol/qol.xml"/>

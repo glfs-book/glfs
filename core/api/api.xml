@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+  "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+ <!ENTITY % general-entities SYSTEM "../../general.ent">
+ %general-entities;
+]>
+
+<chapter id="api">
+  <?dbhtml filename="api.html"?>
+
+  <title>Graphics APIs</title>
+
+  <para>
+    This chapter covers graphics APIs and the libraries that enable them.
+    These can range from OpenGL to VA-API.
+  </para>
+
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="aboutgl.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libglvnd.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="glu.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="vulkan-sdk.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="spirv-llvm-translator.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libatomic_ops.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libdrm.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libgbm.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="libva.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="opencl-sdk.xml"/>
+
+</chapter>

@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sect1 PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+   "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" [
+  <!ENTITY % general-entities SYSTEM "../../general.ent">
+  %general-entities;
+
+  <!ENTITY cuda-download
+    "https://developer.download.nvidia.com/compute/cuda/&cuda-version;/local_installers/cuda_&cuda-version;_&cuda-nvidia-version;_linux.run">
+]>
+
+<sect1 id="cuda" xreflabel="CUDA-&cuda-version;">
+  <?dbhtml filename="cuda.html"?>
+
+  <title>CUDA-&cuda-version;</title>
+
+  <indexterm zone="cuda">
+    <primary sortas="a-cuda">CUDA</primary>
+  </indexterm>
+
+  <sect2 role="package">
+    <title>Introduction to CUDA</title>
+
+    <para>
+      This is the CUDA proprietary toolkit, providing tools for running code on
+      Turing through Blackwell NVIDIA GPUs via the r&nvidia-rev; NVIDIA driver.
+      This is NVIDIA's approach to hardware acceleration.
+    </para>
+
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Download: <ulink url="&cuda-download;"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+
+    <important><para>
+      The NVIDIA driver version listed in the runfile name is the minimum
+      NVIDIA driver version required.
+    </para></important>
+
+    <note><para>
+      The download size is around 4G, so you should consider if and when you
+      will want to download this runfile. For this reason, it is not
+      recommended to download it when using limited hotspot data. Its size can
+      largely be attributed to containing compilers as well as the
+      NVIDIA driver. The driver only accounts for
+      10% of the runfile's size.
+    </para></note>
+
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&patch-root;/cuda/cuda-glibc-2.41-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
+    <bridgehead renderas="sect3">CUDA Dependencies</bridgehead>
+
+    <para role="required">
+      <xref linkend="nvidia"/>
+    </para>
+
+    <para role="recommended">
+      <xref linkend="bash-profile"/>
+    </para>
+
+    <para role="optional">
+      <ulink url="&blfs-svn;/general/gdb.html">GDB</ulink> and
+      <xref linkend="glu"/>
+    </para>
+
+  </sect2>
+
+  <sect2 role="installation">
+    <title>Installation of CUDA</title>
+
+    <para>
+      First create the installation directory and symlink as the &root; user:
+    </para>
+
+<screen role="root"><userinput>mkdir -pv /opt/cuda-&cuda-version; &amp;&amp;
+ln -sfvn cuda-&cuda-version; /opt/cuda</userinput></screen>
+
+    &as_root;
+
+    <para>
+      Start a subshell that will exit on an error:
+    </para>
+
+<screen role="nodump"><userinput>bash -e</userinput></screen>
+
+    <para>
+      Install CUDA by running the following
+      commands:
+    </para>
+
+<screen role="root"><userinput>sh cuda_&cuda-version;_&cuda-nvidia-version;_linux.run     \
+  --target cuda_&cuda-version;_&cuda-nvidia-version;_linux \
+  --noexec
+pushd cuda_&cuda-version;_&cuda-nvidia-version;_linux/builds
+  rm -rf cuda_nsight cuda_sanitizer_api nsight_{compute,systems}
+  rm -rvf bin integration NVIDIA*.run
+  as_root cp version.json /opt/cuda-&cuda-version;
+  as_root cp EULA.txt     /opt/cuda-&cuda-version;
+  rm version.json EULA.txt
+  as_root mkdir -p /opt/cuda-&cuda-version;/bin
+  for lib in *; do
+    as_root cp -vR $lib/* /opt/cuda-&cuda-version;
+    rm -rf $lib
+  done
+  as_root ln -svf lib64 /opt/cuda-&cuda-version;/lib
+  for mf in $(find /opt/cuda-&cuda-version; -name Makefile); do
+    as_root sed -i "s|/usr/local/cuda|/opt/cuda-&cuda-version;|g" "$mf"
+  done
+popd
+rm -rf cuda_&cuda-version;_&cuda-nvidia-version;_linux</userinput></screen>
+
+    <para>
+      Now exit the subshell process:
+    </para>
+
+<screen role="nodump"><userinput>exit</userinput></screen>
+
+    <para>
+      As the &root; user, allow the use of new compilers:
+    </para>
+
+<screen role="root"><userinput>sed -e "/.*unsupported GNU version.*/d" \
+    -e "/.*unsupported clang version.*/d" \
+    -i /opt/cuda-&cuda-version;/targets/x86_64-linux/include/crt/host_config.h</userinput></screen>
+
+    <important><para>
+      This technically is not supported and there may be compilation errors in
+      other packages as a result. However, it's a better compromise than
+      installing older compilers just for one package. This package is still
+      being developed but takes a long time to adapt to newer software.
+    </para></important>
+
+<!--
+    <para>
+      Finally, patch a header file to fix building against
+      glibc-2.41, again as the &root; user:
+    </para>
+
+<screen role="root"><userinput>patch -Np1 /opt/cuda-&cuda-version;/targets/x86_64-linux/include/crt/math_functions.h \
+  -i cuda-glibc-2.41-1.patch</userinput></screen>
+-->
+
+  </sect2>
+
+  <sect2 role="commands">
+    <title>Command Explanations</title>
+
+    <para>
+      <parameter>--target</parameter>: This parameter specifies the extraction
+      directory.
+    </para>
+
+    <para>
+      <parameter>--noexec</parameter>: This parameter does ensures the toolkit
+      does not get triggered for installation.
+    </para>
+
+  </sect2>
+
+  <sect2 role="configuration">
+    <title>Configuring CUDA</title>
+
+    <para>
+      Ensure the libraries are cached as the &root; user:
+    </para>
+
+<screen role="root"><userinput>cat &gt; /etc/ld.so.conf.d/cuda.conf &lt;&lt; EOF &amp;&amp;
+<literal>/opt/cuda/lib64
+/opt/cuda/nvvm/lib64
+/opt/cuda/extras/CUPTI/lib64</literal>
+EOF
+
+ldconfig</userinput></screen>
+
+    <para>
+      Now in order to use the toolkit, it needs to be included in the path.
+    </para>
+
+    <para>
+      As the &root; user, create the profile (dependent on <xref
+      linkend="bash-profile"/>) for CUDA:
+    </para>
+
+<screen role="root"><userinput>cat &gt; /etc/profile.d/cuda.sh &lt;&lt; "EOF"
+<literal># Begin /etc/profile.d/cuda.sh
+
+pathprepend /opt/cuda/bin           PATH
+
+# End /etc/profile.d/cuda.sh</literal>
+EOF</userinput></screen>
+
+    &source-profile;
+
+  </sect2>
+
+  <sect2 role="content">
+    <title>Contents</title>
+
+    <para>
+      For a full package listing, check <ulink
+      url="&arch-pkgs;/extra/x86_64/cuda/">Arch's CUDA package contents</ulink>
+      as the full list is too expansive to list here.
+    </para>
+
+  </sect2>
+
+</sect1>

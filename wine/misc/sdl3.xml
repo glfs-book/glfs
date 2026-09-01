@@ -34,6 +34,18 @@
       </listitem>
     </itemizedlist>
 
+<!--
+    <bridgehead renderas="sect3">Additional Downloads</bridgehead>
+    <itemizedlist spacing="compact">
+      <listitem>
+        <para>
+          Required patch:
+          <ulink url="&dl-root;/SDL3/SDL3-&sdl3-version;-upstream_fixes-1.patch"/>
+        </para>
+      </listitem>
+    </itemizedlist>
+-->
+
     <bridgehead renderas="sect3">SDL3 Dependencies</bridgehead>
 
     <para role="required">
@@ -57,6 +69,15 @@
   <sect2 role="installation">
     <title>Installation of SDL3</title>
 
+<!--
+    <para>
+      Fix potential conflicts with <literal>getresuid</literal> by applying a
+      patch:
+    </para>
+
+<screen><userinput remap="pre">patch -Np1 -i ../SDL3-&sdl3-version;-upstream_fixes-1.patch</userinput></screen>
+-->
+
     <para>
       Install SDL3 by running the following commands:
     </para>
@@ -69,7 +90,7 @@ cmake -D CMAKE_INSTALL_PREFIX=/usr \
       -D SDL_TEST_LIBRARY=OFF      \
       -D SDL_STATIC=OFF            \
       -D SDL_RPATH=OFF             \
-      -W no-dev -G Ninja ..       &amp;&amp;
+      -W no-author -G Ninja ..    &amp;&amp;
 
 ninja</userinput></screen>
 
@@ -97,7 +118,7 @@ cmake -D CMAKE_INSTALL_PREFIX=/usr   \
       -D SDL_TEST_LIBRARY=OFF        \
       -D SDL_STATIC=OFF              \
       -D SDL_RPATH=OFF               \
-      -W no-dev -G Ninja ..         &amp;&amp;
+      -W no-author -G Ninja ..      &amp;&amp;
 
 ninja</userinput></screen>
 
