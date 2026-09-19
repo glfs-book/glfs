@@ -175,9 +175,9 @@
 <!ENTITY nvidia-vaapi-driver-version  "0.0.18">
 <!ENTITY nvidia-beta                  "<superscript>BETA</superscript>">
 <!-- NVIDIA -->
-<!ENTITY nvidia-rev           "610">
+<!ENTITY nvidia-rev           "615">
 <!ENTITY nvidia-linux-version "6.17.x - 7.1.x">
-<!ENTITY nvidia-version       "&nvidia-rev;.57.04">
+<!ENTITY nvidia-version       "&nvidia-rev;.71.09">
 <!ENTITY nvidia-full-name     "&nvidia-version;<!-- &nvidia-beta;-->">
 <!--
 <!ENTITY nv-manifest-version  "2">

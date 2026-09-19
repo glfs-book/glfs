@@ -7,8 +7,6 @@
   <!ENTITY nv-root "https://us.download.nvidia.com/XFree86/Linux-x86_64">
   <!ENTITY nvidia-download
     "&nv-root;/&nvidia-r580-version;/NVIDIA-Linux-x86_64-&nvidia-r580-version;.run">
-  <!ENTITY mesa-raw-repo
-    "https://gitlab.freedesktop.org/mesa/mesa/-/raw/&mesa-major-minor;">
 ]>
 
 <sect1 id="nvidia-r580" xreflabel="NVIDIA-&nvidia-r580-version;">

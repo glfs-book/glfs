@@ -41,6 +41,16 @@
     -->
 
     <listitem>
+      <para>September 19th, 2026</para>
+      <itemizedlist>
+        <listitem>
+          <para>[zeckma] - NVIDIA: 610.57.04 -&gt; 615.71.09 (security). Fixes
+          <ulink url="&glfs-issues;/549">#549</ulink>.</para>
+        </listitem>
+      </itemizedlist>
+    </listitem>
+
+    <listitem>
       <para>September 18th, 2026</para>
       <itemizedlist>
         <listitem>
