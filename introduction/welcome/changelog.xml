@@ -36,9 +36,126 @@
           <para>[name] - Package: ver -&gt; ver. Fixes
           <ulink url="&glfs-issues;/num">#num</ulink>.</para>
         </listitem>
+        <listitem>
+          <para>[name] - Package: ver -&gt; ver (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;num">#num</ulink>.
+        </listitem>
+          <ulink url="&glfs-issues;/num">#num</ulink>.</para>
+        </listitem>
       </itemizedlist>
     </listitem>
     -->
+
+    <listitem>
+      <para>October 16th, 2026</para>
+      <itemizedlist>
+        <listitem>
+          <para>[zeckma] - NSS: 3.129 -&gt; 3.131.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - cURL: 8.22.0 -&gt; 8.23.0 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24117">#24117</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Linux-PAM: 1.7.2 -&gt; 1.7.3.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Shadow: 4.20.2 -&gt; 4.20.3.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Systemd: 261.3 -&gt; 262.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - GLib: 2.88.3 -&gt; 2.90.1.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Polkit: 127 -&gt; 128 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24124">#24124</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Rustc: 1.98.1 -&gt; 1.99.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - rust-bindgen: 0.72.1 -&gt; 0.73.2.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Mako: 1.4.1 -&gt; 1.4.3.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - xorgproto: 2025.1 -&gt; 2026.1.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libpng: 1.6.58 -&gt; 1.6.59 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24040">#24040</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - FreeType: 2.14.3 -&gt; 2.15.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - HarfBuzz: 14.4.0 -&gt; 14.6.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libevdev: 1.13.7 -&gt; 1.14.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libinput: 1.31.3 -&gt; 1.32.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Vulkan-SDK: 1.4.357.0 -&gt; 1.4.363.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - SPIRV-LLVM-Translator: 23.1.1 -&gt; 23.1.2.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - hwdata: 0.411 -&gt; 0.412.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Mesa: 26.1.7 -&gt; 26.2.3.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - NVIDIA: 615.71.09 -&gt; 615.78.08.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Xorg-Server: 21.1.24 -&gt; 21.1.25 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24080">#24080</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Xwayland: 24.1.13 -&gt; 24.1.14 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24081">#24081</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - SDL3: 3.4.16 -&gt; 3.4.18.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - sdl2-compat: 2.32.72 -&gt; 2.32.74.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libaom: 3.15.0 -&gt; 3.15.2 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;23804">#23804</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - x265: 4.2 -&gt; 4.3.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - FFmpeg: 9.0.1 -&gt; 9.0.2.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - GStreamer: 1.28.7 -&gt; 1.28.8 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24090">#24090</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Wine: 11.18 -&gt; 11.20.</para>
+        </listitem>
+      </itemizedlist>
+    </listitem>
 
     <listitem>
       <para>September 19th, 2026</para>

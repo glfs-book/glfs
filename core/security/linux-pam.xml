@@ -128,7 +128,8 @@ chmod -v 4755 /usr/sbin/unix_chkpwd</userinput></screen>
       as the &root; user:
     </para>
 
-<screen role="root"><userinput>tar -C / -xvf ../../Linux-PAM-&linux-pam-docs-version;-docs.tar.xz</userinput></screen>
+<screen role="root"><userinput>tar -C / --no-same-owner -xvf \
+  ../../Linux-PAM-&linux-pam-docs-version;-docs.tar.xz</userinput></screen>
 
   </sect2>
 

@@ -105,11 +105,29 @@
 
     <warning>
       <para>
-        If the currently installed Systemd is below version v260, remove a
-        service that will generate errors on following boots, as the &root;
-        user:
+        If the currently installed Systemd version is below certain versions,
+        upgrading Systemd can cause certain issues.
       </para>
-<screen role="root"><userinput remap="pre">rm -v /usr/lib/systemd/system/systemd-update-utmp-runlevel.service</userinput></screen>
+      <itemizedlist>
+        <listitem>
+          <para>
+            <emphasis role="bold">v261 or below</emphasis>:
+            Remove a socket file that prevents installation from completing,
+            as the &root; user:
+          </para>
+<screen role="root"><userinput
+  remap="pre">rm -v /usr/lib/systemd/system/systemd-udevd-control.socket</userinput></screen>
+        </listitem>
+        <listitem>
+          <para>
+            <emphasis role="bold">v259 or below</emphasis>:
+            Remove a service that will generate errors on following boots,
+            as the &root; user:
+          </para>
+<screen role="root"><userinput
+  remap="pre">rm -v /usr/lib/systemd/system/systemd-update-utmp-runlevel.service</userinput></screen>
+        </listitem>
+      </itemizedlist>
     </warning>
 
     <para>
