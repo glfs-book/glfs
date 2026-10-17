@@ -155,7 +155,7 @@
 <!ENTITY spirv-llvm-translator-version "&llvm-maj-version;.&llvm-min-version;.2">
 <!ENTITY libatomic_ops-version        "7.10.0">
 <!ENTITY libdrm-version               "2.4.134">
-<!ENTITY libgbm-version               "1.0.8">
+<!ENTITY libgbm-version               "1.0.9">
 <!ENTITY libva-version                "2.24.1">
 <!ENTITY opencl-version               "2026.05.29">
 <!-- Graphics Drivers - Preliminaries -->

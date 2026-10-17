@@ -51,6 +51,9 @@
       <para>October 16th, 2026</para>
       <itemizedlist>
         <listitem>
+          <para>[zeckma] - libgbm: 1.0.8 -&gt; 1.0.9.</para>
+        </listitem>
+        <listitem>
           <para>[zeckma] - NSS: 3.129 -&gt; 3.131.</para>
         </listitem>
         <listitem>
