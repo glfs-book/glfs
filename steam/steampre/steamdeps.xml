@@ -11,33 +11,27 @@
   <title>Steam Dependencies</title>
 
   <para>
-    Steam is a collection of both 32-bit and 64-bit software. Think of the
-    32-bit tools as a base that always need to be ran, while the 64-bit
-    tools and libraries are for 64-bit specific tasks. You will need the
-    ability to run 32-bit software, regardless if you are on a 64-bit
-    platform or not. You must also follow the lib32 instructions of each
-    dependency listed unless the section doesn't have those instructions or
-    it is stated to not be needed.
-  </para>
-
-  <para>
-    Furthermore, these dependencies are all for runtime. All the tools for
-    the initial installation were built in LFS.
+    To ensure Steam will run properly, you must also follow the lib32
+    instructions of each dependency listed unless the section doesn't have
+    those instructions or it is stated to not be needed. Moreover, the listed
+    dependencies are all for runtime. All the tools for actual installation
+    were built in LFS/MLFS.
   </para>
 
   <para role="required">
-    <xref linkend="alsa-plugins"/>,
     <xref linkend="curl"/>,
     <xref linkend="dbus"/>,
-    Display server (<xref linkend="xorg-server"/> or
+    a display server (<xref linkend="xorg-server"/> or
     <xref linkend="wayland"/> w/ <xref linkend="xwayland"/>),
-    <xref linkend="make-ca"/> (with the symlink added), and
-    &opengl;
+    &gbm;
+    <xref linkend="make-ca"/> (with the symlink added),
+    &opengl;,
+    <xref linkend="pulseaudio"/>, and
+    <xref linkend="vulkan-sdk"/>
   </para>
 
   <para role="recommended">
-    <xref linkend="vulkan-sdk"/> (required for most games),
-    <xref linkend="pulseaudio"/>,
+    <xref linkend="libva"/>,
     <ulink url="&blfs-svn;/x/xdg-desktop-portal.html">xdg-desktop-portal</ulink>
     (and a backend service for your graphical environment),
     <xref linkend="xdg-user-dirs"/>,
@@ -48,7 +42,15 @@
 
   <para role="optional">
     <ulink url="&blfs-svn;/general/lsb-tools.html">LSB-Tools</ulink>
-    (for Steam surveys)
+    (for Steam surveys),
+    <ulink url="&blfs-svn;/basicnet/networkmanager.html">NetworkManager</ulink>
+    (Wi-Fi connection management when running the client as an OS shell),
+    <ulink url="&blfs-svn;/multimedia/pipewire.html">Pipewire</ulink>
+    (for better audio management when using VR or running the client as an OS
+    shell), and
+    <ulink url="&blfs-svn;/general/udisks2.html">UDisks-2</ulink>
+    (for automatic library discover on external drives when hotplugging and
+    formatting disks)
   </para>
 
 </sect1>

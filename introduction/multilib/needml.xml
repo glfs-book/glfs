@@ -12,31 +12,31 @@
   <title>Do I Need Multilib?</title>
 
   <para>
-    Now that you have an idea of what multilib is, it is time
-    to decide whether to enable that support or not. Depending on the
-    circumstance, it may be necessary.
+    Now that multilib has a definition, it is time to decide whether to enable
+    that support. Depending on what you want out of this book, it may be
+    required.
   </para>
 
   <sect2>
     <title>Steam</title>
 
     <para>
-      Some don't not know this unless they push the
-      limits of the games they play, but many games on Steam
-      are 32-bit. Some games are no longer receiving updates
-      while some are still being updated but are still 32-bit
-      to this day.
+      Steam has a hard requirement on multilib capabilities and demands 32-bit
+      libraries on x86 systems, whilst at the same time not supporting pure
+      32-bit systems. In order to run Steam on Linux, you need to have an
+      x86_64/AMD64 CPU and many 32-bit libraries, including Xorg, audio, and
+      GPU drivers.
     </para>
 
     <para>
-      Not only are a lot of games 32-bit, but Steam itself
-      requires that you have 32-bit libraries. If the 32-bit
-      libraries aren't on the system, Steam will quit, saying
-      it needs a library such as
-      <filename class="libraryfile">libc.so.6</filename>.
-      You will need the ability to execute 32-bit applications
-      as well as all the libraries necessary which is laid out
-      in Chapter 3.
+      Originally, Steam was a set of 32-bit binaries and began introducing
+      64-bit only components, like for the store front and eventually the
+      log-in screen. Many have asked for years that Steam should become fully
+      64-bit. The goal was to no longer require 32-bit libraries at all, no
+      multilib needed. Steam eventually only fulfilled one part of that, which
+      was making Steam 64-bit; at the same time, Steam still requires 32-bit
+      libraries. This will be the case for the foreseeable future. Multilib is
+      absolutely required for Steam.
     </para>
 
   </sect2>
@@ -52,7 +52,8 @@
       If you need a given architecture and it says it needs 32-bit libraries,
       lib32, or MLFS, proceed to the next page. If you don't need those
       libraries but need the i686 MinGW-w64 toolchain, you won't need multilib
-      for Wine.
+      for Wine. As a teaser though, if you want the new WoW64 or pure 64-bit
+      mode, multilib is not required for Wine.
     </para>
 
   </sect2>

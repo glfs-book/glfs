@@ -69,11 +69,12 @@
     <para>
       The primary reason GLFS expects users to install libglvnd is that
       NVIDIA and several packages and AppImages require libglvnd
-      either directly or indirectly. For NVIDIA, it requires libglvnd outright,
-      while AppImages suffer from the problem mentioned earlier in this
-      section: differences in sonames, as well as a missing library. <filename
-      class="libraryfile">libGL</filename> has a soname that's different from
-      Mesa's and <filename class="libraryfile">libGLX</filename> is not
+      either directly or indirectly. For NVIDIA and Steam, they require
+      libglvnd outright, while AppImages suffer from the problem mentioned
+      earlier in this section: differences in sonames, as well as a missing
+      library. <filename class="libraryfile">libGL</filename> has a soname
+      that's different from Mesa's and
+      <filename class="libraryfile">libGLX</filename> is not
       included from Mesa. This breaks most AppImages. As for other packages,
       their build systems can cause configuration to fail without libglvnd as
       <filename class="libraryfile">libOpenGL</filename> doesn't exist, and the

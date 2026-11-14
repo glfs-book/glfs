@@ -12,24 +12,32 @@
   <title>Achieving Multilib</title>
 
   <para>
-    On many distros, getting multilib support is very straight forward. For
-    LFS, there is a version that provides multilib support, from normal binary
-    execution to compiling 32-bit software from the supplied toolchain. The
-    guide is called Multilib LFS, or MLFS. It can be read <ulink
-    url="&mlfs-root;/">here</ulink>. If you haven't built LFS with MLFS or
-    built in multilib support already, then you will need to start over.
+    Following the LFS principle, most software will be compiled from source.
+    To be able to compile 32-bit libraries on 64-bit, a specific process must
+    be performed. This process arms a 64-bit LFS system with a compiler that
+    can compile 32-bit software, but will also arm the system with basic 32-bit
+    libraries that a lot of software will require.
   </para>
 
   <para>
-    The same principles of compiling for 32-bit in that book will also
+    That process is detailed in Multilib LFS, also referred to as MLFS.
+    The book, a version of LFS, can be read <ulink
+    url="&mlfs-root;/">here</ulink>. It's important to keep in mind that it is
+    a version of LFS, not supplementary material. It doesn't arm an already
+    existing 64-bit LFS system with a compiler that can target 32-bit
+    software. It instead creates a new 64-bit LFS system that meets the goal
+    of multilib. It is planned for a supplemental version of MLFS to eventually
+    be made so users don't have to start from scratch in that regard, but for
+    now, you will need to create a new LFS system using MLFS. If you already
+    have a 64-bit only LFS system, you will need to start over.
+  </para>
+
+  <para>
+    The same principles of targeting 32-bit in that book will also
     apply to this book as well. If you haven't already, read
     <xref linkend="important"/> to check what basic principles still apply
-    in this book when targeting 32-bit.
-  </para>
-
-  <para>
-    Furthermore, read <xref linkend="which-instructions"/> to find out which
-    instructions to follow.
+    in this book when targeting 32-bit. Furthermore, read <xref
+    linkend="which-instructions"/> to find out which instructions to follow.
   </para>
 
 </sect1>

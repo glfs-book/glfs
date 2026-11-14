@@ -11,34 +11,46 @@
   <title>What  is Multilib?</title>
 
   <para>
-    Multilib is essentially the ability to at least execute software
-    that was built for another architecture different from your own.
-    For example, and most common: the user has a x86_64 CPU that is
-    wanting to execute software built to run on a x86 CPU. To better
-    establish terms, x86_64 is 64-bit and amd64, whereas x86 is
-    32-bit and ix86 where <option>x</option> can vary from 3 to 6.
+    Multilib is the ability to execute software that was built for another
+    architecture different from your system's. The most common example is that
+    the user with an x86_64 CPU is wanting to execute software built to run on
+    a 32-bit CPU. To better establish terms, x86_64 is 64-bit and AMD64, and
+    32-bit refers to the ix86
+    <footnote><para>
+      The <option>x</option> can vary from 3 to 6. The <option>x</option> can
+      also be written as <option>?</option> or <option>*</option>.
+    </para></footnote>
+    architecture and IA-32. x86 in general refers to the architecture family,
+    where 32-bit/IA-32 and 64-bit/AMD64 live.
   </para>
+
+  <note>
+    <para>
+      This book covers only the x86 family, specifically running instructions
+      on x86_64/AMD64/64-bit, and does not cover multilib on architectures with
+      similar capabilities like ARM.
+    </para>
+  </note>
 
   <sect2>
     <title>How Does it Work?</title>
 
     <para>
-      Multilib can be achieved firstmost by having the hardware
-      capable of x86 emulation, then having libraries built for x86.
-      We will get into how to compile x86 libraries and software and
-      their execution later, but know the general process for LFS
-      and BLFS is to almost always compile software and that's what
-      we'll be doing.
+      At the barebones level, multilib can be achieved by having the hardware
+      capable of 32-bit x86 emulation. However, 32-bit software often has
+      dependencies, and those dependencies need to be in the same architecture
+      as the software. Thus, multilib becomes more complex.
     </para>
 
-    <note>
-      <para>
-        It is worth noting that when the term multilib is used throughout
-        this book, it is referring to running i686 instructions on an x86_64
-        host.  This does not cover running other 32 bit architectures on their
-        64 bit extensions, like armhf on arm64.
-      </para>
-    </note>
+    <para>
+      Distros often square this dependency by simply downloading the 32-bit
+      libraries, sometimes requiring enabling a profile or database. This
+      automatically resolves issues. The principle of the LFS family, though,
+      is to compile almost everything from source with maximum control. The
+      issue then starts to ultimately become "how can we compile 32-bit
+      libraries on AMD64?" which the question itself becomes complicated, but
+      the answer is straightforward.
+    </para>
 
   </sect2>
 

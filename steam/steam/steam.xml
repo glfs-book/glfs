@@ -59,9 +59,7 @@
 <screen><userinput>ln -sf /usr/bin/true steamdeps</userinput></screen>
 
     <para>
-      Then install Steam by running
-      the following command as the <systemitem class="username">root
-      </systemitem> user:
+      Then install Steam by running the following command as the &root; user:
     </para>
 
 <screen role="root"><userinput>make install &amp;&amp;
@@ -84,9 +82,8 @@ mv -v /usr/share/doc/steam{,-&steam-version;}</userinput></screen>
     <para>
       <command>ln -sf /usr/bin/true steamdeps</command>: This command
       makes the <filename>steamdeps</filename> Python
-       script always exit with code 0 as it uses APT and its
-       Python module, which isn't installed in LFS
-      and shouldn't be.
+      script always exit with code 0 as it uses APT and its
+      Python module, which are not installed in LFS and shouldn't be.
     </para>
 
     <para>
@@ -131,8 +128,7 @@ mv -v /usr/share/doc/steam{,-&steam-version;}</userinput></screen>
       to the login screen. Make extra sure you have the symlink made in
       <xref linkend="make-ca"/> or you will not be able to get past this point.
       Then, everything should work as normal and you can go ahead and allow
-      Proton as you normally would on any given
-      Linux distribution.
+      Proton as you normally would on any given Linux distribution.
     </para>
 
     <para>
