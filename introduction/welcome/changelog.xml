@@ -48,6 +48,15 @@
     -->
 
     <listitem>
+      <para>November 15th, 2026</para>
+      <itemizedlist>
+        <listitem>
+          <para>[zeckma] - libgbm: 1.0.9 -&gt; 1.1.0.</para>
+        </listitem>
+      </itemizedlist>
+    </listitem>
+
+    <listitem>
       <para>October 16th, 2026</para>
       <itemizedlist>
         <listitem>
