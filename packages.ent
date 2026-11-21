@@ -175,19 +175,18 @@
 <!ENTITY nvidia-vaapi-driver-version  "0.0.18">
 <!ENTITY nvidia-beta                  "<superscript>BETA</superscript>">
 <!-- NVIDIA -->
-<!ENTITY nvidia-rev           "615">
-<!ENTITY nvidia-linux-version "6.17.x - 7.1.x">
-<!ENTITY nvidia-version       "&nvidia-rev;.78.08">
+<!ENTITY nvidia-rev           "620">
+<!ENTITY nvidia-linux-version "6.17.x - 7.3.x">
+<!ENTITY nvidia-version       "&nvidia-rev;.73.04">
 <!ENTITY nvidia-full-name     "&nvidia-version;<!-- &nvidia-beta;-->">
 <!--
 <!ENTITY nv-manifest-version  "2">
 <!ENTITY nv-sysv-bs           "2">
 -->
-<!ENTITY cuda-version         "13.3.1">
-<!ENTITY cuda-nvidia-version  "610.43.02">
+<!ENTITY cuda-version         "13.5.0">
 <!-- NVIDIA r580 -->
 <!ENTITY nvidia-r580-linux-version "6.15.x - 7.1.x">
-<!ENTITY nvidia-r580-version       "580.178.04">
+<!ENTITY nvidia-r580-version       "580.196.07">
 <!ENTITY nvidia-r580-full-name     "&nvidia-r580-version;">
 <!--
 <!ENTITY nv-r580-manifest-version  "1">

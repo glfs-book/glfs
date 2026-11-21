@@ -5,7 +5,7 @@
   %general-entities;
 
   <!ENTITY cuda-download
-    "https://developer.download.nvidia.com/compute/cuda/&cuda-version;/local_installers/cuda_&cuda-version;_&cuda-nvidia-version;_linux.run">
+    "https://developer.download.nvidia.com/compute/cuda/&cuda-version;/local_installers/cuda_&cuda-version;_linux.run">
 ]>
 
 <sect1 id="cuda" xreflabel="CUDA-&cuda-version;">
@@ -34,10 +34,12 @@
       </listitem>
     </itemizedlist>
 
+<!--
     <important><para>
       The NVIDIA driver version listed in the runfile name is the minimum
       NVIDIA driver version required.
     </para></important>
+-->
 
     <note><para>
       The download size is around 4G, so you should consider if and when you
@@ -100,10 +102,10 @@ ln -sfvn cuda-&cuda-version; /opt/cuda</userinput></screen>
       commands:
     </para>
 
-<screen role="root"><userinput>sh cuda_&cuda-version;_&cuda-nvidia-version;_linux.run     \
-  --target cuda_&cuda-version;_&cuda-nvidia-version;_linux \
+<screen role="root"><userinput>sh cuda_&cuda-version;_linux.run     \
+  --target cuda_&cuda-version;_linux \
   --noexec
-pushd cuda_&cuda-version;_&cuda-nvidia-version;_linux/builds
+pushd cuda_&cuda-version;_linux/builds
   rm -rf cuda_nsight cuda_sanitizer_api nsight_{compute,systems}
   rm -rvf bin integration NVIDIA*.run
   as_root cp version.json /opt/cuda-&cuda-version;
@@ -119,7 +121,7 @@ pushd cuda_&cuda-version;_&cuda-nvidia-version;_linux/builds
     as_root sed -i "s|/usr/local/cuda|/opt/cuda-&cuda-version;|g" "$mf"
   done
 popd
-rm -rf cuda_&cuda-version;_&cuda-nvidia-version;_linux</userinput></screen>
+rm -rf cuda_&cuda-version;_linux</userinput></screen>
 
     <para>
       Now exit the subshell process:

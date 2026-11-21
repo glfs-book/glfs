@@ -41,8 +41,6 @@
           See BLFS ticket
           <ulink url="&blfs-ticket-root;num">#num</ulink>.
         </listitem>
-          <ulink url="&glfs-issues;/num">#num</ulink>.</para>
-        </listitem>
       </itemizedlist>
     </listitem>
     -->
@@ -50,6 +48,15 @@
     <listitem>
       <para>November 21st, 2026</para>
       <itemizedlist>
+        <listitem>
+          <para>[zeckma] - NVIDIA: 615.78.08 -&gt; 620.73.04.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - NVIDIA-r580: 580.178.04 -&gt; 580.196.07.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - CUDA: 13.3.1 -&gt; 13.5.0.</para>
+        </listitem>
         <listitem>
           <para>[zeckma] - nghttp2: 1.70.0 -&gt; 1.71.0.</para>
         </listitem>
