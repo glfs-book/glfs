@@ -73,17 +73,16 @@
         </para>
       </listitem>
     </itemizedlist>
-<!--
+
     <bridgehead renderas="sect3">Additional Downloads</bridgehead>
     <itemizedlist spacing="compact">
       <listitem>
         <para>
           Required patch:
-          <ulink url="&patch-root;/icu4c-&icu-version;-fix_enumeration-1.patch"/>
+          <ulink url="&dl-root;/icu4c/icu4c-&icu-version;-upstream_fix-1.patch"/>
         </para>
       </listitem>
     </itemizedlist>
--->
 
   </sect2>
 
@@ -97,13 +96,13 @@
       </para>
     </note>
 
-<!--
     <para>
-      First, fix a regression in version 58.1:
+      Fix a bug causing Thunderbird to malfunction if built with
+      system ICU:
     </para>
 
-<screen><userinput>patch -p1 -i ../icu4c-&icu-version;-fix_enumeration-1.patch</userinput></screen>
--->
+<screen><userinput>patch -p2 -i ../icu4c-&icu-version;-upstream_fix-1.patch</userinput></screen>
+
     <para>
       Install ICU by running the following commands:
     </para>

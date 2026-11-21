@@ -48,6 +48,101 @@
     -->
 
     <listitem>
+      <para>November 21st, 2026</para>
+      <itemizedlist>
+        <listitem>
+          <para>[zeckma] - nghttp2: 1.70.0 -&gt; 1.71.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - NSPR: 4.40 -&gt; 4.41.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - NSS: 3.131 -&gt; 3.134.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - p11-kit: 0.26.5 -&gt; 0.26.6.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - D-Bus: 1.16.2 -&gt; 1.16.4 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24275">#24275</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Systemd: 262 -&gt; 262.2.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - CMake: 4.4.5 -&gt; 4.5.1.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Rustc: 1.99.0 -&gt; 1.100.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - YAML: 0.2.5 -&gt; 0.2.6.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - PyYAML: 6.0.3 -&gt; 6.0.4.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - HarfBuzz: 14.6.0 -&gt; 15.2.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Fontconfig: 2.18.3 -&gt; 2.18.4 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24307">#24307</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libfontenc: 1.1.9 -&gt; 1.1.10 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24303">#24303</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libXfont2: 2.0.9 -&gt; 2.0.10 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24304">#24304</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - hwdata: 0.412 -&gt; 0.413.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - XKeyboard-Config: 2.48 -&gt; 2.49.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Xorg-Server: 21.1.25 -&gt; 21.1.26 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24258">#24258</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Xwayland: 24.1.14 -&gt; 24.1.15 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24259">#24259</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - SDL3: 3.4.18 -&gt; 3.4.20.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - SVT-AV1: 4.2.0 -&gt; 4.3.0.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - dav1d: 1.5.4 -&gt; 1.5.5.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - libaom: 3.15.2 -&gt; 3.15.3.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - FFmpeg: 9.0.2 -&gt; 9.1.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - GStreamer: 1.28.8 -&gt; 1.28.9 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24245">#24245</ulink>.</para>
+        </listitem>
+        <listitem>
+          <para>[zeckma] - Wine: 11.20 -&gt; 11.22.</para>
+        </listitem>
+      </itemizedlist>
+    </listitem>
+
+    <listitem>
       <para>November 20th, 2026</para>
       <itemizedlist>
         <listitem>

@@ -14,14 +14,14 @@
 <!ENTITY icu-version                  "&icu-major;.&icu-minor;">
 <!ENTITY libxml2-minor                "2.15">
 <!ENTITY libxml2-version              "&libxml2-minor;.4">
-<!ENTITY nghttp2-version              "1.70.0">
+<!ENTITY nghttp2-version              "1.71.0">
 <!ENTITY libtasn1-version             "4.21.0">
-<!ENTITY nspr-version                 "4.40">
+<!ENTITY nspr-version                 "4.41">
 <!ENTITY nss-major                    "3">
-<!ENTITY nss-minor                    "131">
+<!ENTITY nss-minor                    "134">
 <!ENTITY nss-dir                      "&nss-major;_&nss-minor;">
 <!ENTITY nss-version                  "&nss-major;.&nss-minor;">
-<!ENTITY p11-kit-version              "0.26.5">
+<!ENTITY p11-kit-version              "0.26.6">
 <!ENTITY make-ca-version              "1.16.1">
 <!ENTITY libunistring-version         "1.4.2">
 <!ENTITY libidn2-version              "2.3.8">
@@ -29,13 +29,13 @@
 <!ENTITY curl-version                 "8.23.0">
 <!ENTITY wget-version                 "1.25.0">
 <!-- Security -->
-<!ENTITY dbus-version                 "1.16.2">   <!-- Even minors only -->
+<!ENTITY dbus-version                 "1.16.4">   <!-- Even minors only -->
 <!ENTITY linux-pam-version            "1.7.3">
 <!ENTITY linux-pam-docs-version       "&linux-pam-version;">
 <!ENTITY openrc-version               "0.63.3">
 <!ENTITY shadow-version               "4.20.3">
 <!ENTITY elogind-version              "257.16">
-<!ENTITY systemd-version              "262">
+<!ENTITY systemd-version              "262.2">
 <!ENTITY duktape-version              "2.7.0">
 <!ENTITY glib2-major                   "2">
 <!ENTITY glib2-minor                   "90">
@@ -47,23 +47,23 @@
 <!ENTITY desktop-file-utils-version   "0.28">
 <!ENTITY polkit-version               "128">
 <!-- Tooling -->
-<!ENTITY cmake-major-version          "4.4">
-<!ENTITY cmake-point-version          "5">
+<!ENTITY cmake-major-version          "4.5">
+<!ENTITY cmake-point-version          "1">
 <!ENTITY cmake-version                "&cmake-major-version;.&cmake-point-version;">
 <!ENTITY llvm-maj-version             "23">
 <!ENTITY llvm-min-version             "1">
 <!ENTITY llvm-point-version           "0">
 <!ENTITY llvm-version                 "&llvm-maj-version;.&llvm-min-version;.&llvm-point-version;">
-<!ENTITY rustc-version                "1.99.0">
+<!ENTITY rustc-version                "1.100.0">
 <!-- rustc-change-id can be found in src/bootstrap/src/utils/change_tracker.rs
      at the very bottom: change_id. -->
-<!ENTITY rustc-change-id              "160100">
+<!ENTITY rustc-change-id              "162423">
 <!ENTITY cbindgen-version             "0.29.4">
 <!ENTITY rust-bindgen-version         "0.73.2">
 <!ENTITY mako-version                 "1.4.3">
 <!ENTITY cython-version               "3.3.0">
-<!ENTITY yaml-version                 "0.2.5">
-<!ENTITY pyyaml-version               "6.0.3">
+<!ENTITY yaml-version                 "0.2.6">
+<!ENTITY pyyaml-version               "6.0.4">
 <!-- Audio -->
 <!ENTITY alsa-download-http           "https://www.alsa-project.org/files/pub">
 <!ENTITY alsa-download-ftp            "ftp://ftp.alsa-project.org/pub">
@@ -93,8 +93,8 @@
 <!ENTITY libpng-version               "1.6.59">
 <!ENTITY apng-version                 "1.6.59">
 <!ENTITY freetype2-version            "2.15.0">
-<!ENTITY harfbuzz-version             "14.6.0">
-<!ENTITY fontconfig-version           "2.18.3">
+<!ENTITY harfbuzz-version             "15.2.0">
+<!ENTITY fontconfig-version           "2.18.4">
 <!-- stable lt .90 micro version -->
 <!-- BEGIN X7LIB -->
 <!ENTITY xtrans-version               "1.6.0">
@@ -113,8 +113,8 @@
 <!ENTITY libXrender-version           "0.9.12">
 <!ENTITY libXcursor-version           "1.2.3">
 <!ENTITY libXdamage-version           "1.1.7">
-<!ENTITY libfontenc-version           "1.1.9">
-<!ENTITY libXfont2-version            "2.0.9">
+<!ENTITY libfontenc-version           "1.1.10">
+<!ENTITY libXfont2-version            "2.0.10">
 <!ENTITY libXft-version               "2.3.9">
 <!ENTITY libXi-version                "1.8.3">
 <!ENTITY libXinerama-version          "1.1.6">
@@ -160,7 +160,7 @@
 <!ENTITY opencl-version               "2026.05.29">
 <!-- Graphics Drivers - Preliminaries -->
 <!ENTITY pciutils-version             "3.15.0">
-<!ENTITY hwdata-version               "0.412">
+<!ENTITY hwdata-version               "0.413">
 <!-- Graphics Drivers - NVIDIA -->
 <!ENTITY mesa-major-minor             "26.2">
 <!ENTITY mesa-version                 "&mesa-major-minor;.3">
@@ -244,11 +244,11 @@
 <!ENTITY font-util-version            "1.4.2">
 <!ENTITY font-xfree86-type1-version   "1.0.5">
 <!-- END X7FONTS -->
-<!ENTITY xkeyboard-config-version     "2.48">
+<!ENTITY xkeyboard-config-version     "2.49">
 <!ENTITY libepoxy-minor               "1.5">
 <!ENTITY libepoxy-version             "&libepoxy-minor;.10">
-<!ENTITY xorg-server-version          "21.1.25">
-<!ENTITY xwayland-version             "24.1.14">
+<!ENTITY xorg-server-version          "21.1.26">
+<!ENTITY xwayland-version             "24.1.15">
 <!-- BEGIN X7DRIVER -->
 <!ENTITY xorg-evdev-driver-version    "2.11.0">
 <!ENTITY xorg-libinput-driver-version "1.5.0">
@@ -281,24 +281,24 @@
 <!ENTITY libxkbcommon-minor           "d1442a">
 <!ENTITY libxkbcommon-version         "d1442aaa6b635551182e83c3b55037f4c118c962">
 <!ENTITY libxkbcommon-real            "1.13.2">
-<!ENTITY sdl3-version                 "3.4.18">
+<!ENTITY sdl3-version                 "3.4.20">
 <!ENTITY sdl2-version                 "2.32.74">
 
 <!ENTITY nasm-version                 "3.02">
-<!ENTITY svt-av1-version              "4.2.0">
-<!ENTITY dav1d-version                "1.5.4">
-<!ENTITY libaom-version               "3.15.2">
+<!ENTITY svt-av1-version              "4.3.0">
+<!ENTITY dav1d-version                "1.5.5">
+<!ENTITY libaom-version               "3.15.3">
 <!ENTITY fdk-aac-version              "2.0.3">
 <!ENTITY mpg123-version               "1.33.7">
 <!ENTITY lame-version                 "4.0">
 <!ENTITY libvpx-version               "1.17.0">
 <!ENTITY x264-version                 "20250815">
 <!ENTITY x265-version                 "4.3">
-<!ENTITY ffmpeg-version               "9.0.2">
-<!ENTITY gstreamer-version            "1.28.8">
+<!ENTITY ffmpeg-version               "9.1">
+<!ENTITY gstreamer-version            "1.28.9">
 
 <!ENTITY wine-major-version           "11">
-<!ENTITY wine-version                 "&wine-major-version;.20">
+<!ENTITY wine-version                 "&wine-major-version;.22">
 
 <!ENTITY dxvk-version                 "3.1.1">
 <!ENTITY dxvk-libdisplay-info         "275e6459c7ab1ddd4b125f28d0440716e4888078">

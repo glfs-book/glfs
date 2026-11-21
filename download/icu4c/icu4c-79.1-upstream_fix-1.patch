@@ -1,0 +1,122 @@
+Submitted By:            Xi Ruoyao <xry111 at xry111 dot site>
+Date:                    2026-11-16
+Initial Package Version: 79.1
+Upstream Status:         Committed
+Origin:                  https://github.com/unicode-org/icu/pull/4359.patch
+Description:             Fix a bug causing Thunderbird to malfunction if
+                         built with system ICU.
+
+From c0d7ad95e02394f47fefbff23ca3fbc57fe6ad8a Mon Sep 17 00:00:00 2001
+From: Mikhail Teterin <github-2026@virtual-estates.net>
+Date: Wed, 11 Nov 2026 15:08:51 -0500
+Subject: [PATCH] ICU-22132 Write the X-TZINFO property in VTimeZone::write()
+
+For a VTimeZone not created from VTIMEZONE data, e.g. by
+createVTimeZoneByID(), write(UnicodeString&, UErrorCode&) emitted the
+zone ID and tz data version as a bare "America/Los_Angeles[2026f]" line,
+which is not an iCalendar property at all and breaks RFC 5545 parsers.
+Prefix it with "X-TZINFO:", as the two other write() overloads -- and
+ICU4J's VTimeZone.write(Writer) -- already do.
+
+This is the change Sean Burke attached to the ticket in 2022, which
+Mozilla has carried in its bundled ICU ever since (Mozilla bug 1790071,
+intl/icu-patches/bug-1790071-ICU-22132-standardize-vtzone-output.diff).
+Add a test that the output carries X-TZINFO and that every line is a
+property.
+
+Co-Authored-By:	Claude Opus 5.5 (effort medium)
+---
+ icu4c/source/i18n/vtzone.cpp            | 17 ++++++++------
+ icu4c/source/test/intltest/tzrulets.cpp | 30 +++++++++++++++++++++++++
+ icu4c/source/test/intltest/tzrulets.h   |  1 +
+ 3 files changed, 41 insertions(+), 7 deletions(-)
+
+diff --git a/icu4c/source/i18n/vtzone.cpp b/icu4c/source/i18n/vtzone.cpp
+index da36f8cb390c..c6e7dc41884a 100644
+--- a/icu4c/source/i18n/vtzone.cpp
++++ b/icu4c/source/i18n/vtzone.cpp
+@@ -1740,14 +1740,17 @@ VTimeZone::write(VTZWriter& writer, UErrorCode& status) const {
+             }
+         }
+     } else {
+-        UnicodeString icutzprop;
+-        UVector customProps(nullptr, uhash_compareUnicodeString, status);
++        UVector customProps(uprv_deleteUObject, uhash_compareUnicodeString, status);
+         if (olsonzid.length() > 0 && icutzver.length() > 0) {
+-            icutzprop.append(olsonzid);
+-            icutzprop.append(u'[');
+-            icutzprop.append(icutzver);
+-            icutzprop.append(u']');
+-            customProps.addElement(&icutzprop, status);
++            LocalPointer<UnicodeString> icutzprop(new UnicodeString(ICU_TZINFO_PROP), status);
++            if (U_FAILURE(status)) {
++                return;
++            }
++            icutzprop->append(olsonzid);
++            icutzprop->append(u'[');
++            icutzprop->append(icutzver);
++            icutzprop->append(u']');
++            customProps.adoptElement(icutzprop.orphan(), status);
+         }
+         writeZone(writer, *tz, &customProps, status);
+     }
+diff --git a/icu4c/source/test/intltest/tzrulets.cpp b/icu4c/source/test/intltest/tzrulets.cpp
+index cc32067075ae..26f48e708392 100644
+--- a/icu4c/source/test/intltest/tzrulets.cpp
++++ b/icu4c/source/test/intltest/tzrulets.cpp
+@@ -141,6 +141,7 @@ void TimeZoneRuleTest::runIndexedTest( int32_t index, UBool exec, const char* &n
+         CASE(16, TestVTimeZoneWrapper);
+         CASE(17, TestT8943);
+         CASE(18, TestVTimeZoneRruleUntil);
++        CASE(19, TestVTimeZoneWriteTzinfoProp);
+         default: name = ""; break;
+     }
+ }
+@@ -2675,6 +2676,35 @@ TimeZoneRuleTest::TestVTimeZoneRruleUntil() {
+     assertTrue("Should contain rrule2", vtzData.indexOf(rrule2) > 0);
+ }
+ 
++// ICU-22132 VTimeZone::write(UnicodeString&, UErrorCode&) must emit the ICU
++// time zone information as an X-TZINFO property, not as a bare line, which
++// is not valid iCalendar (RFC 5545).
++void
++TimeZoneRuleTest::TestVTimeZoneWriteTzinfoProp() {
++    IcuTestErrorCode ec(*this, "TestVTimeZoneWriteTzinfoProp");
++    LocalPointer<VTimeZone> vtz(VTimeZone::createVTimeZoneByID("America/Los_Angeles"));
++
++    UnicodeString vtzData;
++    vtz->write(vtzData, ec);
++    ec.assertSuccess();
++    assertTrue("Should contain X-TZINFO",
++               vtzData.indexOf(u"\r\nX-TZINFO:America/Los_Angeles[") > 0);
++
++    // Every content line must start with a property name followed by a colon
++    int32_t start = 0;
++    while (start < vtzData.length()) {
++        int32_t end = vtzData.indexOf(u"\r\n", start);
++        if (end < 0) {
++            end = vtzData.length();
++        }
++        UnicodeString line(vtzData, start, end - start);
++        if (line.indexOf(u':') <= 0) {
++            errln(UnicodeString(u"FAIL: Not an iCalendar property: ") + line);
++        }
++        start = end + 2;
++    }
++}
++
+ #endif /* #if !UCONFIG_NO_FORMATTING */
+ 
+ //eof
+diff --git a/icu4c/source/test/intltest/tzrulets.h b/icu4c/source/test/intltest/tzrulets.h
+index 279618b1f3ee..7f4b857db5b2 100644
+--- a/icu4c/source/test/intltest/tzrulets.h
++++ b/icu4c/source/test/intltest/tzrulets.h
+@@ -41,6 +41,7 @@ class TimeZoneRuleTest : public CalendarTimeZoneTest {
+     void TestVTimeZoneWrapper();
+     void TestT8943();
+     void TestVTimeZoneRruleUntil();
++    void TestVTimeZoneWriteTzinfoProp();
+ 
+ private:
+     void verifyTransitions(BasicTimeZone& icutz, UDate start, UDate end);
