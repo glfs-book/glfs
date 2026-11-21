@@ -163,7 +163,7 @@
 <!ENTITY hwdata-version               "0.413">
 <!-- Graphics Drivers - NVIDIA -->
 <!ENTITY mesa-major-minor             "26.2">
-<!ENTITY mesa-version                 "&mesa-major-minor;.3">
+<!ENTITY mesa-version                 "&mesa-major-minor;.7">
 <!--
 <!ENTITY eglexternalplatform-version  "1.2.1">
 <!ENTITY egl-gbm-version              "1.1.3">

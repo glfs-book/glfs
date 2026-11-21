@@ -49,6 +49,9 @@
       <para>November 21st, 2026</para>
       <itemizedlist>
         <listitem>
+          <para>[zeckma] - Mesa: 26.2.3 -&gt; 26.2.7.</para>
+        </listitem>
+        <listitem>
           <para>[zeckma] - NVIDIA: 615.78.08 -&gt; 620.73.04.</para>
         </listitem>
         <listitem>
