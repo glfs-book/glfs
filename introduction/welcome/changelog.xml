@@ -87,7 +87,9 @@
           <para>[zeckma] - Rustc: 1.99.0 -&gt; 1.100.0.</para>
         </listitem>
         <listitem>
-          <para>[zeckma] - YAML: 0.2.5 -&gt; 0.2.6.</para>
+          <para>[zeckma] - YAML: 0.2.5 -&gt; 0.2.6 (security).
+          See BLFS ticket
+          <ulink url="&blfs-ticket-root;24326">#24326</ulink>.</para>
         </listitem>
         <listitem>
           <para>[zeckma] - PyYAML: 6.0.3 -&gt; 6.0.4.</para>
