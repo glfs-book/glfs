@@ -5,9 +5,9 @@
   %general-entities;
 
   <!ENTITY libgbm-root
-    "https://github.com/glfs-book/libgbm/archive/&libgbm-version;">
+    "https://gitlab.freedesktop.org/mesa/libgbm/-/archive/&libgbm-version;">
   <!ENTITY libgbm-download
-    "&libgbm-root;/libgbm-&libgbm-version;.tar.gz">
+    "&libgbm-root;/libgbm-&libgbm-version;.tar.bz2">
 ]>
 
 <sect1 id="libgbm" xreflabel="libgbm-&libgbm-version;">
