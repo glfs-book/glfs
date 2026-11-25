@@ -4,14 +4,15 @@
   <!ENTITY % general-entities SYSTEM "../../general.ent">
   %general-entities;
 
-  <!ENTITY yaml-root "https://github.com/yaml/libyaml/releases/download">
-  <!ENTITY yaml-download "&yaml-root;/&yaml-version;/yaml-&yaml-version;.tar.gz">
+  <!ENTITY libyaml-root "https://github.com/yaml/libyaml/archive">
+  <!ENTITY libyaml-download
+    "&libyaml-root;/&libyaml-version;/libyaml-&libyaml-version;.tar.gz">
 ]>
 
-<sect1 id="libyaml" xreflabel="libyaml-&yaml-version;">
+<sect1 id="libyaml" xreflabel="libyaml-&libyaml-version;">
   <?dbhtml filename="libyaml.html"?>
 
-  <title>libyaml-&yaml-version;</title>
+  <title>libyaml-&libyaml-version;</title>
 
   <indexterm zone="libyaml">
     <primary sortas="a-libyaml">libyaml</primary>
@@ -21,15 +22,14 @@
     <title>Introduction to libyaml</title>
 
     <para>
-      The yaml package contains a C
-      library for parsing and emitting YAML (YAML Ain't Markup
-      Language) code.
+      The libyaml package contains a C library for parsing and emitting YAML
+      (YAML Ain't Markup Language) code.
     </para>
 
     <itemizedlist spacing="compact">
       <listitem>
         <para>
-          Download: <ulink url="&yaml-download;"/>
+          Download: <ulink url="&libyaml-download;"/>
         </para>
       </listitem>
     </itemizedlist>
@@ -50,7 +50,8 @@
       commands:
     </para>
 
-    <screen><userinput>./configure --prefix=/usr --disable-static &amp;&amp;
+<screen><userinput>autoreconf -fi &amp;&amp;
+./configure --prefix=/usr --disable-static &amp;&amp;
 make</userinput></screen>
 
 <!--

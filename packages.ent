@@ -62,7 +62,7 @@
 <!ENTITY rust-bindgen-version         "0.73.2">
 <!ENTITY mako-version                 "1.4.3">
 <!ENTITY cython-version               "3.3.0">
-<!ENTITY yaml-version                 "0.2.6">
+<!ENTITY libyaml-version              "0.2.6">
 <!ENTITY pyyaml-version               "6.0.4">
 <!-- Audio -->
 <!ENTITY alsa-download-http           "https://www.alsa-project.org/files/pub">
