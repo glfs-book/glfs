@@ -249,8 +249,8 @@ ldconfig</userinput></screen>
       drivers, as well as NVIDIA GPUs used in tandem with CUDA. The default is
       all of the targets. You can use a semicolon separated list. Valid targets
       are: host, AArch64, AMDGPU, ARM, AVR, BPF, Hexagon, Lanai, LoongArch,
-      Mips, MSP430, NVPTX, PowerPC, RISCV, Sparc, SystemZ, SystemZ, VE,
-      WebAssembly, X86, XCore, or all.
+      Mips, MSP430, NVPTX, PowerPC, RISCV, Sparc, SystemZ, VE, WebAssembly,
+      X86, XCore, or all.
     </para>
 
     <para>
